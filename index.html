@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线下回收物流配置 - 预付费竞价中心</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    font-size: 13px;
+    color: #515a6e;
+    background: #f5f7f9;
+    display: flex;
+    overflow: hidden;
+  }
+  /* ============ 左侧菜单 ============ */
+  .sidebar {
+    width: 262px;
+    flex: 0 0 262px;
+    height: 100vh;
+    background: #001529;
+    overflow-y: auto;
+    color: #c5c8ce;
+    scrollbar-width: thin;
+  }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #2b3a4a; border-radius: 3px; }
+  .menu-item {
+    height: 40px;
+    line-height: 40px;
+    padding: 0 14px 0 18px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 13px;
+    position: relative;
+    user-select: none;
+  }
+  .menu-item:hover { background: #0f2237; }
+  .menu-item .mi-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    margin-right: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #7b8ca0;
+  }
+  .menu-item .mi-icon svg { width: 14px; height: 14px; fill: currentColor; }
+  .menu-item .mi-text { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .menu-item .mi-arrow {
+    font-size: 11px;
+    color: #6b7c90;
+    transition: transform .2s;
+  }
+  .menu-item.active {
+    background: #000d1a;
+    color: #2d8cf0;
+  }
+  .menu-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: #2d8cf0;
+  }
+  .menu-item.active .mi-icon { color: #2d8cf0; }
+
+  /* ============ 右侧主体 ============ */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+  .header {
+    height: 50px;
+    flex: 0 0 50px;
+    background: #fff;
+    border-bottom: 1px solid #e8eaec;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  .hamburger {
+    width: 20px; height: 20px; margin-right: 18px; cursor: pointer; color: #515a6e;
+  }
+  .hamburger svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .breadcrumb { display: flex; align-items: center; font-size: 13px; color: #808695; }
+  .breadcrumb .bc-home { color: #808695; margin-right: 8px; }
+  .breadcrumb .bc-home svg { width: 14px; height: 14px; fill: currentColor; vertical-align: -2px; }
+  .breadcrumb .sep { margin: 0 8px; color: #c5c8ce; }
+  .breadcrumb .cur { color: #515a6e; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+  .icon-btn { cursor: pointer; color: #808695; }
+  .icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #ff9d2e;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .avatar svg { width: 22px; height: 22px; }
+
+  .content {
+    flex: 1;
+    overflow: auto;
+    padding: 16px 18px 24px;
+    background: #fff;
+  }
+  /* 提示区 */
+  .tips { margin: 2px 2px 18px; color: #808695; font-size: 12px; line-height: 20px; }
+  .tips .t-title { color: #808695; }
+  /* 筛选栏 */
+  .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .select-wrap { position: relative; }
+  .select-trigger {
+    height: 32px;
+    background: #fff;
+    border: 1px solid #dcdee2;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 28px 0 10px;
+    cursor: pointer;
+    color: #c5c8ce;
+    font-size: 13px;
+    position: relative;
+    transition: border-color .2s;
+    user-select: none;
+  }
+  .select-trigger:hover { border-color: #57a3f3; }
+  .select-trigger.has-value { color: #515a6e; }
+  .select-trigger .caret {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 6px solid #808695;
+  }
+  .select-trigger.multiple { min-width: 240px; }
+  .select-trigger.single { width: 220px; }
+  .select-trigger.narrow { width: 140px; }
+  .dropdown {
+    position: absolute; top: 37px; left: 0; right: 0;
+    background: #fff; border: 1px solid #dcdee2; border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    z-index: 50; max-height: 260px; overflow: auto; display: none; padding: 4px 0;
+  }
+  .dropdown.open { display: block; }
+  .dropdown .opt { padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  .dropdown .opt:hover { background: #f3f3f3; }
+  .dropdown .opt.checked { color: #2d8cf0; background: #f0f9ff; }
+  .input-id {
+    width: 300px; height: 32px;
+    border: 1px solid #dcdee2; border-radius: 4px;
+    padding: 0 10px; font-size: 13px; color: #515a6e; outline: none;
+    transition: border-color .2s;
+  }
+  .input-id::placeholder { color: #c5c8ce; }
+  .input-id:focus { border-color: #57a3f3; }
+  .btn {
+    height: 32px; padding: 0 14px; border-radius: 4px;
+    border: 1px solid transparent; cursor: pointer; font-size: 13px;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    transition: all .2s;
+  }
+  .btn-primary { background: #2d8cf0; color: #fff; border-color: #2d8cf0; }
+  .btn-primary:hover { background: #5b9ef4; border-color: #5b9ef4; }
+  .btn-default { background: #fff; color: #515a6e; border-color: #dcdee2; }
+  .btn-default:hover { color: #2d8cf0; border-color: #57a3f3; }
+  .btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+  /* 表格 */
+  .table-wrap { border: 1px solid #e8eaec; border-radius: 3px; overflow-x: auto; }
+  .tag-mode {
+    display: inline-block; background: #19be6b; color: #fff;
+    font-size: 11px; line-height: 17px; padding: 0 6px; border-radius: 3px;
+  }
+  .mode-radios { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; min-height: 32px; font-size: 13px; color: #515a6e; }
+  .mode-radios label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  col.c-id { width: 64px; }
+  col.c-type { width: 88px; }
+  col.c-scope { width: auto; }
+  col.c-mode { width: 72px; }
+  col.c-supplier { width: 140px; }
+  col.c-condition { width: 168px; }
+  col.c-time { width: 132px; }
+  col.c-op { width: 118px; }
+  thead th {
+    background: #f8f8f9;
+    color: #515a6e;
+    font-weight: 600;
+    font-size: 12px;
+    text-align: center;
+    height: 40px;
+    border-bottom: 1px solid #e8eaec;
+    border-right: 1px solid #f0f0f0;
+    padding: 0 6px;
+    white-space: nowrap;
+  }
+  thead th:last-child { border-right: none; }
+  tbody td {
+    text-align: center;
+    height: 50px;
+    border-bottom: 1px solid #e8eaec;
+    border-right: 1px solid #f5f5f5;
+    font-size: 12px;
+    padding: 4px 6px;
+    color: #515a6e;
+  }
+  tbody td:last-child { border-right: none; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f5faff; }
+  tbody tr.highlight { background: #eaf4ff; }
+  .channel-line { line-height: 18px; color: #515a6e; font-size: 12px; }
+  .tag-default {
+    display: inline-block;
+    margin-top: 2px;
+    background: #f90;
+    color: #fff;
+    font-size: 11px;
+    line-height: 17px;
+    padding: 0 6px;
+    border-radius: 3px;
+  }
+  select.effect-select:disabled,
+  select.scope-select:disabled,
+  .scope-locked,
+  .scope-tags.is-locked .scope-tag {
+    background: #f7f7f7;
+    color: #c5c8ce;
+    cursor: not-allowed;
+  }
+  .scope-locked { height: 32px; line-height: 32px; font-size: 12px; padding: 0 8px; border: 1px solid #dcdee2; border-radius: 4px; width: 300px; }
+  .mode-radios.is-locked { pointer-events: none; }
+  .mode-radios.is-locked label { color: #c5c8ce; cursor: not-allowed; }
+  .time-name { color: #515a6e; line-height: 17px; }
+  .time-date { color: #808695; line-height: 17px; font-size: 11px; }
+  .btn-edit {
+    background: #2d8cf0; color: #fff; border: none;
+    height: 22px; padding: 0 11px; border-radius: 3px;
+    font-size: 12px; cursor: pointer;
+  }
+  .btn-edit:hover { background: #5b9ef4; }
+  .btn-del {
+    background: #ed4014; color: #fff; border: none;
+    height: 22px; padding: 0 11px; border-radius: 3px;
+    font-size: 12px; cursor: pointer; margin-left: 6px;
+  }
+  .btn-del:hover { background: #f16543; }
+  .confirm { width: 420px; margin-top: 120px; }
+  .confirm .modal-body { font-size: 13px; color: #515a6e; line-height: 22px; padding: 22px 18px 8px; }
+
+  /* 分页 */
+  .pagination {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; padding: 14px 6px; font-size: 12px; color: #515a6e;
+  }
+  .pg-total { margin-right: 6px; }
+  .pg-btn {
+    min-width: 28px; height: 28px; line-height: 26px;
+    border: 1px solid #dcdee2; border-radius: 3px;
+    background: #fff; color: #515a6e; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 6px; font-size: 12px; user-select: none;
+  }
+  .pg-btn:hover { border-color: #2d8cf0; color: #2d8cf0; }
+  .pg-btn.active { background: #2d8cf0; border-color: #2d8cf0; color: #fff; }
+  .pg-select {
+    height: 28px; border: 1px solid #dcdee2; border-radius: 3px;
+    display: inline-flex; align-items: center; padding: 0 22px 0 8px;
+    position: relative; cursor: pointer; background: #fff;
+  }
+  .pg-select .caret {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid #808695;
+  }
+  .pg-jump-input {
+    width: 42px; height: 28px; border: 1px solid #dcdee2; border-radius: 3px;
+    text-align: center; font-size: 12px; outline: none; color: #515a6e;
+  }
+  .pg-jump-input:focus { border-color: #57a3f3; }
+
+  /* 右下角悬浮工具条 */
+  .fab {
+    position: fixed; right: 16px; bottom: 22px;
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid #e8eaec; border-radius: 18px;
+    padding: 5px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.1);
+    color: #ff9d2e;
+  }
+  .fab svg { width: 18px; height: 18px; fill: currentColor; cursor: pointer; }
+  .fab .fab-separator { width: 1px; height: 16px; background: #e8eaec; }
+
+  /* toast */
+  .toast {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-10px);
+    background: #fff; border: 1px solid #dcdee2; border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    padding: 10px 18px; font-size: 13px; color: #515a6e;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ============ 新增 / 编辑 弹窗 ============ */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000;
+    display: none; align-items: flex-start; justify-content: center; padding: 20px 0;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    width: 640px; background: #fff; border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.2);
+    max-height: calc(100vh - 40px); display: flex; flex-direction: column;
+  }
+  .modal-head {
+    height: 46px; flex: 0 0 46px; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #e8eaec;
+  }
+  .modal-title { font-size: 14px; font-weight: 600; color: #17233d; }
+  .modal-close { cursor: pointer; color: #808695; font-size: 20px; line-height: 1; }
+  .modal-close:hover { color: #515a6e; }
+  .modal-body { padding: 16px 18px 8px; overflow-y: auto; }
+  .modal-tips { color: #808695; font-size: 12px; line-height: 19px; margin: 0 0 16px 2px; }
+  .form-item { display: flex; align-items: flex-start; margin-bottom: 16px; }
+  .form-item > label {
+    width: 100px; flex: 0 0 100px; text-align: right; padding-right: 12px;
+    line-height: 32px; font-size: 12px; color: #515a6e;
+  }
+  .form-item .req { color: #ed4014; margin-right: 3px; }
+  .form-item .fc { flex: 1; min-width: 0; }
+  .msel {
+    position: relative; width: 300px; min-height: 32px;
+    border: 1px solid #dcdee2; border-radius: 4px; background: #fff;
+    padding: 2px 26px 2px 8px; cursor: text;
+  }
+  .msel.focus { border-color: #57a3f3; box-shadow: 0 0 0 2px rgba(45,140,240,.15); }
+  .msel .arrow {
+    position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+    width: 0; height: 0; border-left: 5px solid transparent;
+    border-right: 5px solid transparent; border-top: 6px solid #808695;
+  }
+  .msel .ph { color: #c5c8ce; line-height: 28px; font-size: 12px; }
+  .ctag {
+    display: inline-flex; align-items: center; background: #f7f7f7;
+    border: 1px solid #e8eaec; border-radius: 3px; padding: 1px 5px;
+    margin: 2px 5px 2px 0; font-size: 12px; color: #515a6e; line-height: 18px;
+  }
+  .ctag .x { margin-left: 6px; color: #808695; cursor: pointer; font-size: 13px; }
+  .ctag .x:hover { color: #ed4014; }
+  .msel-drop {
+    position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+    border: 1px solid #dcdee2; border-radius: 4px; z-index: 20;
+    max-height: 230px; overflow: auto; display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12); padding: 3px 0;
+  }
+  .msel-drop.open { display: block; }
+  .msel-drop .op { padding: 6px 10px; cursor: pointer; font-size: 12px; }
+  .msel-drop .op:hover { background: #f5faff; }
+  .msel-drop .op.checked { color: #2d8cf0; background: #f0f9ff; }
+  .mtextarea {
+    width: 300px; height: 72px; border: 1px solid #dcdee2; border-radius: 4px;
+    padding: 6px 8px; resize: none; font-size: 12px; color: #515a6e;
+    outline: none; font-family: inherit;
+  }
+  .mtextarea:focus { border-color: #57a3f3; }
+  .mtextarea::placeholder { color: #c5c8ce; }
+  .tree-box {
+    width: 100%; height: 300px; overflow-y: auto; border: 1px solid #e8eaec;
+    border-radius: 3px; padding: 5px 0;
+  }
+  .tree-row {
+    display: flex; align-items: center; height: 27px; padding-right: 10px;
+    font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .tree-row:hover { background: #f5faff; }
+  .tree-arrow { width: 15px; flex: 0 0 15px; text-align: center; color: #808695; font-size: 10px; display: inline-block; transition: transform .15s; }
+  .tree-arrow.open { transform: rotate(90deg); }
+  .tree-cb {
+    width: 14px; height: 14px; border: 1px solid #bcbcbc; border-radius: 2px;
+    margin: 0 8px 0 2px; flex: 0 0 14px; position: relative; background: #fff;
+  }
+  .tree-cb.checked { background: #2d8cf0; border-color: #2d8cf0; }
+  .tree-cb.checked::after { content: '✓'; color: #fff; font-size: 11px; position: absolute; left: 2px; top: -3px; }
+  .tree-cb.partial { background: #2d8cf0; border-color: #2d8cf0; }
+  .tree-cb.partial::after { content: ''; width: 6px; height: 2px; background: #fff; position: absolute; left: 3px; top: 5px; }
+  .tree-label { color: #515a6e; }
+  .tree-level-1 { padding-left: 15px; }
+  .tree-level-2 { padding-left: 32px; }
+  .modal-foot {
+    border-top: 1px solid #e8eaec; padding: 12px; text-align: center; flex: 0 0 auto;
+  }
+  .modal-foot .btn { margin: 0 5px; min-width: 72px; justify-content: center; }
+  .effect-select, .scope-select {
+    width: 300px; height: 32px; border: 1px solid #dcdee2; border-radius: 4px;
+    padding: 0 8px; font-size: 13px; color: #515a6e; background: #fff; outline: none;
+  }
+  .effect-select:focus, .scope-select:focus { border-color: #57a3f3; }
+  .add-scope {
+    height: 32px; padding: 0 14px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #2d8cf0; color: #fff; font-size: 13px;
+  }
+  .add-scope:hover { background: #5b9ef4; }
+  .scope-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; max-width: 420px; }
+  .scope-tag {
+    background: #fff; border: 1px solid #dcdee2; border-radius: 4px;
+    padding: 3px 8px; font-size: 13px; color: #515a6e; line-height: 20px;
+  }
+  .scope-tag .x { margin-left: 6px; color: #808695; cursor: pointer; }
+  .scope-tag .x:hover { color: #ed4014; }
+  .picker-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1200;
+    display: none; align-items: flex-start; justify-content: center; padding: 28px 16px;
+  }
+  .picker-mask.show { display: flex; }
+  .picker {
+    width: 980px; max-width: calc(100vw - 32px); background: #fff; border-radius: 4px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18); max-height: calc(100vh - 56px);
+    display: flex; flex-direction: column;
+  }
+  .picker-head {
+    height: 48px; flex: 0 0 48px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; border-bottom: 1px solid #f0f0f0; font-size: 16px; color: #17233d; font-weight: 650;
+  }
+  .picker-body { padding: 16px 16px 8px; overflow: auto; }
+  .picker-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; font-size: 13px; }
+  .picker-filters label { color: #515a6e; }
+  .picker-filters input, .picker-filters select {
+    height: 32px; border: 1px solid #dcdee2; border-radius: 4px; padding: 0 8px;
+    width: 180px; font-size: 13px; color: #515a6e; outline: none;
+  }
+  .picker-filters input::placeholder { color: #c5c8ce; }
+  .picker table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .picker th { background: #fafafa; color: #515a6e; font-weight: 650; text-align: left; height: 40px; padding: 0 10px; border-bottom: 1px solid #f0f0f0; }
+  .picker td { height: 42px; padding: 0 10px; border-bottom: 1px solid #f0f0f0; color: #515a6e; }
+  .picker tr.picked td { background: #e6f7ff; }
+  .picker-page {
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    padding: 12px 2px 4px; font-size: 13px; color: #515a6e;
+  }
+  .picker-page .chosen { margin-right: auto; }
+  .picker-foot { border-top: 1px solid #f0f0f0; padding: 12px 16px; text-align: right; }
+  .picker-foot .btn { margin-left: 8px; min-width: 72px; justify-content: center; }
+</style>
+</head>
+<body>
+
+<!-- ============ 左侧菜单 ============ -->
+<aside class="sidebar" id="sidebar"></aside>
+
+<!-- ============ 右侧主体 ============ -->
+<div class="main">
+  <div class="header">
+    <div class="hamburger" title="收起菜单">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </div>
+    <div class="breadcrumb">
+      <span class="bc-home"><svg viewBox="0 0 24 24"><path d="M12 3L2 11h3v9h6v-6h2v6h6v-9h3L12 3z"/></svg></span>
+      <span>预付费竞价中心</span>
+      <span class="sep">/</span>
+      <span class="cur">线下回收物流配置</span>
+    </div>
+    <div class="header-right">
+      <span class="icon-btn" title="全屏">
+        <svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+      </span>
+      <div class="avatar" title="用户">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="11" fill="#ff9d2e"/>
+          <circle cx="9" cy="10" r="1.3" fill="#fff"/>
+          <circle cx="15" cy="10" r="1.3" fill="#fff"/>
+          <path d="M8.5 14.5c1.2 1.6 5.8 1.6 7 0" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 提示区 -->
+    <div class="tips">
+      <div class="t-title">提示：</div>
+      <div>1、生效类型是寄货方维度。订单命中优先级为：门店、二级代理、代理商、渠道、合作方，根据命中情况确定订单发货方式</div>
+      <div>2、直发的配置条件为全部、指定回收商、指定区域，三选一。命中优先级为：指定回收商&gt;指定区域&gt;全部。指定区域按发货地址生效</div>
+      <div>3、过仓的配置条件为全部、指定区域，二选一。命中时指定区域优先于全部。指定区域按发货地址生效。收货仓库不在本页配置</div>
+      <div>4、修改后立即生效，只影响之后的预约。已有物流单不改</div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <div class="select-wrap">
+        <div class="select-trigger narrow" id="selEffect"><span class="ph" data-placeholder="生效类型">生效类型</span><span class="caret"></span></div>
+        <div class="dropdown" id="ddEffect">
+          <div class="opt" data-v="门店">门店</div>
+          <div class="opt" data-v="二级代理">二级代理</div>
+          <div class="opt" data-v="代理商">代理商</div>
+          <div class="opt" data-v="渠道">渠道</div>
+          <div class="opt" data-v="合作方">合作方</div>
+        </div>
+      </div>
+      <div class="select-wrap">
+        <div class="select-trigger narrow" id="selMode"><span class="ph" data-placeholder="发货方式">发货方式</span><span class="caret"></span></div>
+        <div class="dropdown" id="ddMode">
+          <div class="opt" data-v="直发">直发</div>
+          <div class="opt" data-v="过仓">过仓</div>
+        </div>
+      </div>
+      <div class="select-wrap">
+        <div class="select-trigger single" id="selSupplier"><span class="ph" data-placeholder="物流供应商">物流供应商</span><span class="caret"></span></div>
+        <div class="dropdown" id="ddSupplier">
+          <div class="opt" data-v="顺丰科技有限公司">顺丰科技有限公司</div>
+          <div class="opt" data-v="京东快递">京东快递</div>
+        </div>
+      </div>
+      <input class="input-id" id="inputScope" placeholder="生效范围 ID / 名称">
+      <input class="input-id" id="inputId" placeholder="配置ID">
+      <button class="btn btn-primary" onclick="applyFilter()">
+        <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 105.7 13.7l5.3 5.3 1.4-1.4-5.3-5.3A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/></svg>搜索
+      </button>
+      <button class="btn btn-default" onclick="doAction('重置')">
+        <svg viewBox="0 0 24 24"><path d="M17.6 6.4A8 8 0 104 12h2a6 6 0 1110.2 4.2l-2.6-2.6H20V2l-2.4 4.4zM4 4v5h5L4 4z"/></svg>重置
+      </button>
+      <button class="btn btn-primary" onclick="openModal('新增')">
+        <svg viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"/></svg>新增
+      </button>
+      <button class="btn btn-primary" onclick="doAction('取消京东物流')">取消京东物流</button>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col class="c-id"><col class="c-type"><col class="c-scope"><col class="c-mode"><col class="c-supplier">
+          <col class="c-condition"><col class="c-time"><col class="c-time"><col class="c-op">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>配置ID</th>
+            <th>生效类型</th>
+            <th>生效范围（寄货方）</th>
+            <th>发货方式</th>
+            <th>物流供应商</th>
+            <th>配置条件</th>
+            <th>创建时间</th>
+            <th>最后修改时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="pagination">
+        <span class="pg-total" id="pgTotal">共 9 条</span>
+        <span class="pg-btn" onclick="changePage('prev')">&lt;</span>
+        <span class="pg-btn active" onclick="changePage(1)">1</span>
+        <span class="pg-btn" onclick="changePage('next')">&gt;</span>
+        <div class="pg-select" onclick="doAction('切换每页条数')">10 条/页<span class="caret"></span></div>
+        <span>跳至</span>
+        <input class="pg-jump-input" value="1">
+        <span>页</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="fab">
+  <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+  <span class="fab-separator"></span>
+  <svg viewBox="0 0 24 24"><path d="M4 4h16v12H7l-3 3V4zm2 2v8h10V6H6z"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm8 4c0-.5 0-1-.1-1.5l2-1.5-2-3.5-2.4 1a8 8 0 00-2.6-1.5L14.5 2h-5l-.4 3c-1 .3-1.8.8-2.6 1.5l-2.4-1-2 3.5 2 1.5c0 .5-.1 1-.1 1.5s0 1 .1 1.5l-2 1.5 2 3.5 2.4-1c.8.7 1.6 1.2 2.6 1.5l.4 3h5l.4-3c1-.3 1.8-.8 2.6-1.5l2.4 1 2-3.5-2-1.5c.1-.5.1-1 .1-1.5z"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M3 5h18v14H3V5zm2 2v10h14V7H5z"/></svg>
+</div>
+
+<!-- ============ 新增 / 编辑 弹窗 ============ -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modalTitle">新增</span>
+      <span class="modal-close" onclick="closeModal()" title="关闭">×</span>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tips">
+        <div>提示：</div>
+        <div>1、生效类型选择寄货方，命中优先级为门店&gt;二级代理&gt;代理商&gt;渠道&gt;合作方</div>
+        <div>2、直发的配置条件为全部、指定回收商、指定区域，三选一。命中优先级为：指定回收商&gt;指定区域&gt;全部。全部表示该寄货方下全部回收商、全部区域。指定区域按发货地址生效</div>
+        <div>3、过仓的配置条件为全部、指定区域，二选一。命中时指定区域优先于全部。全部表示该寄货方下全部区域。指定区域按发货地址生效</div>
+        <div>4、修改/删除配置后立即生效</div>
+      </div>
+
+      <div class="form-item">
+        <label><span class="req">*</span>生效类型</label>
+        <div class="fc">
+          <select id="effectType" class="effect-select" onchange="onEffectType()">
+            <option value="合作方">合作方</option>
+            <option value="渠道" selected>渠道</option>
+            <option value="代理商">代理商</option>
+            <option value="二级代理">二级代理</option>
+            <option value="门店">门店</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <label><span class="req">*</span>生效范围</label>
+        <div class="fc" id="scopeBox"></div>
+      </div>
+
+      <div class="form-item">
+        <label><span class="req">*</span>发货方式</label>
+        <div class="fc">
+          <div class="mode-radios">
+            <label><input type="radio" name="shipMode" value="直发" checked onchange="setShipMode('直发')">直发</label>
+            <label><input type="radio" name="shipMode" value="过仓" onchange="setShipMode('过仓')">过仓</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <label><span class="req">*</span>物流供应商</label>
+        <div class="fc">
+          <div class="msel" id="mSupplierTrigger" onclick="toggleDropdown(event,'mSupplierDrop')">
+            <span id="mSupplierText" class="ph" style="line-height:28px">物流供应商</span>
+            <span class="arrow"></span>
+            <div class="msel-drop" id="mSupplierDrop">
+              <div class="op" data-v="顺丰科技有限公司">顺丰科技有限公司</div>
+              <div class="op" data-v="京东快递">京东快递</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <label><span class="req">*</span>配置条件</label>
+        <div class="fc">
+          <div class="mode-radios" id="conditionRadios"></div>
+          <div id="conditionNote" style="display:none;color:#808695;font-size:12px;line-height:20px;margin-top:4px"></div>
+          <div id="fallbackNote" style="display:none;color:#808695;font-size:12px;line-height:20px;margin-top:4px">兜底只支持修改物流供应商</div>
+        </div>
+      </div>
+
+      <div class="form-item" id="recyclerItem">
+        <label>指定回收商</label>
+        <div class="fc">
+          <textarea class="mtextarea" id="mRecycler" placeholder="请填写父回收商id，输入多个用英文逗号隔开"></textarea>
+        </div>
+      </div>
+
+      <div class="form-item" id="areaItem">
+        <label>指定区域</label>
+        <div class="fc">
+          <div class="tree-box" id="areaTree"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-default" onclick="closeModal()">取 消</button>
+      <button class="btn btn-primary" onclick="saveModal()">保 存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="deleteMask">
+  <div class="modal confirm">
+    <div class="modal-head">
+      <span class="modal-title">删除</span>
+      <span class="modal-close" onclick="closeDelete()" title="关闭">×</span>
+    </div>
+    <div class="modal-body" id="deleteText">确认删除这条配置？</div>
+    <div class="modal-foot">
+      <button class="btn btn-default" onclick="closeDelete()">取 消</button>
+      <button class="btn btn-primary" onclick="confirmDelete()">确 认</button>
+    </div>
+  </div>
+</div>
+
+<div class="picker-mask" id="pickerMask">
+  <div class="picker">
+    <div class="picker-head">
+      <span id="pickerTitle">添加代理商</span>
+      <span class="modal-close" onclick="closePicker()">×</span>
+    </div>
+    <div class="picker-body">
+      <div class="picker-filters" id="pickerFilters"></div>
+      <table>
+        <thead id="pickerHead"></thead>
+        <tbody id="pickerBody"></tbody>
+      </table>
+      <div class="picker-page">
+        <span class="chosen" id="pickerChosen">已勾选 0 条</span>
+        <span id="pickerTotal">共 0 条</span>
+        <button class="pg-btn" onclick="pickerPage(-1)">&lt;</button>
+        <span id="pickerPages"></span>
+        <button class="pg-btn" onclick="pickerPage(1)">&gt;</button>
+        <span>10 条/页</span>
+      </div>
+    </div>
+    <div class="picker-foot">
+      <button class="btn btn-default" onclick="closePicker()">取消</button>
+      <button class="btn btn-primary" onclick="confirmPicker()">确认</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- 左侧菜单 ---------- */
+const icons = {
+  list: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  grid: '<path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>',
+  coin: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h6M9 14h6"/>',
+  gear: '<path d="M12 8a4 4 0 100 8 4 4 0 000-8zm8 4c0-.6-.1-1.2-.2-1.7l2-1.5-2-3.4-2.3 1a8 8 0 00-2.5-1.4L14.7 2h-5.4l-.3 3c-1 .3-1.8.8-2.5 1.4l-2.3-1-2 3.4 2 1.5c-.1.5-.2 1.1-.2 1.7s.1 1.2.2 1.7l-2 1.5 2 3.4 2.3-1c.7.6 1.5 1.1 2.5 1.4l.3 3h5.4l.3-3c1-.3 1.8-.8 2.5-1.4l2.3 1 2-3.4-2-1.5c.1-.5.2-1.1.2-1.7z"/>',
+  shield: '<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5l8-3z"/>',
+  insights: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  wallet: '<path d="M3 7h18v12H3V7zm0 4h18M6 7V5h12v2"/>',
+  swap: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>',
+  tag: '<path d="M3 3h8l10 10-8 8L3 11V3zm5 5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>',
+  hash: '<path d="M5 9h14M5 15h14M10 3L8 21M16 3l-2 18"/>',
+  link: '<path d="M10 13a5 5 0 007 0l2-2a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-2 2a5 5 0 007 7l1-1"/>',
+  card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>',
+  alert: '<path d="M12 3L2 20h20L12 3zm0 6v6m0 3v.5"/>',
+  check: '<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
+  bot: '<rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 4v4M9 14h.01M15 14h.01M9 17h6"/>',
+  book: '<path d="M4 4h7a3 3 0 013 3v13a3 3 0 00-3-3H4V4zm16 0h-7a3 3 0 00-3 3v13a3 3 0 013-3h7V4z"/>',
+  flower: '<circle cx="12" cy="12" r="3"/><path d="M12 9c0-3-1-6 0-6s3 1 3 4M12 15c0 3 1 6 0 6s-3-1-3-4M9 12c-3 0-6-1-6 0s1 3 4 3M15 12c3 0 6 1 6 0s-1-3-4-3"/>'
+};
+const menus = [
+  {t:'出价流水列表', i:'list'},
+  {t:'出价流水列表(归档)', i:'list'},
+  {t:'竞价订单列表', i:'grid'},
+  {t:'电子钱包流水表', i:'wallet'},
+  {t:'智能出价配置', i:'insights'},
+  {t:'订单分配管理', i:'swap', arrow:'down'},
+  {t:'推单干预配置', i:'gear', arrow:'down'},
+  {t:'3.0服务费设置', i:'coin', arrow:'down'},
+  {t:'平台服务费2.0', i:'coin', arrow:'down'},
+  {t:'议价配置', i:'tag'},
+  {t:'第三方平台管理', i:'link', arrow:'right'},
+  {t:'当换开放平台', i:'card', arrow:'down'},
+  {t:'线下回收物流配置', i:'hash', active:true},
+  {t:'物流地址映射配置', i:'hash'},
+  {t:'资金支付管理', i:'wallet', arrow:'down'},
+  {t:'竞价异常机况配置', i:'alert'},
+  {t:'要素校验配置', i:'check'},
+  {t:'防呆配置', i:'shield'},
+  {t:'AI做单配置', i:'bot'},
+];
+const sidebar = document.getElementById('sidebar');
+sidebar.innerHTML = menus.map(m => `
+  <div class="menu-item ${m.active?'active':''}" onclick="menuClick('${m.t}',this)">
+    <span class="mi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[m.i]}</svg></span>
+    <span class="mi-text">${m.t}</span>
+    ${m.arrow ? `<span class="mi-arrow">${m.arrow==='down'?'▾':'▸'}</span>` : ''}
+  </div>`).join('');
+
+/* ---------- 表格数据 ---------- */
+const rows = [
+  {id:0, effectType:'兜底', scope:'-', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'系统', date:'2025-04-17 16:46:55', createdBy:'系统', createdAt:'2025-04-01 10:00:00', mode:'直发', isFallback:true},
+  {id:11, effectType:'门店', scope:'483941 OPPO官方授权体验店', scopeKind:'tags', scopeItems:[{id:'483941', name:'OPPO官方授权体验店'}], supplier:'京东快递', area:'广东省', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:40:12', createdBy:'孙亭辉', createdAt:'2026-11-18 09:12:06', mode:'过仓', hl:true},
+  {id:10, effectType:'二级代理', scope:'6612 OPPO邹邹佣金二级', scopeKind:'tags', scopeItems:[{id:'6612', name:'OPPO邹邹佣金二级'}], supplier:'顺丰科技有限公司', area:'全国', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', mode:'过仓'},
+  {id:9, effectType:'代理商', scope:'862 OPPO邹邹佣金测试代理002', scopeKind:'tags', scopeItems:[{id:'862', name:'OPPO邹邹佣金测试代理002'}], supplier:'京东快递', area:'全国', recycler:'369', name:'孙亭辉', date:'2026-11-20 18:28:04', createdBy:'孙亭辉', createdAt:'2026-11-17 15:22:18', mode:'直发'},
+  {id:8, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', supplier:'京东快递', area:'广东省', recycler:'全部', name:'孙亭辉', date:'2026-11-20 17:12:33', createdBy:'孙亭辉', createdAt:'2026-11-16 11:03:52', mode:'直发'},
+  {id:1, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'YH215762', date:'2025-06-12 14:28:23', createdBy:'YH215762', createdAt:'2025-06-12 11:05:08', mode:'直发'},
+  {id:2, effectType:'渠道', scope:'900032（小当置换-一加）', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'YH000093', date:'2025-07-08 10:55:31', createdBy:'YH000093', createdAt:'2025-07-08 09:16:44', mode:'直发'},
+  {id:3, effectType:'合作方', scope:'OPPO', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'系统', date:'2025-04-17 16:46:55', createdBy:'系统', createdAt:'2025-04-17 16:46:20', mode:'直发'},
+  {id:4, effectType:'合作方', scope:'vivo', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'系统', date:'2025-04-17 16:46:55', createdBy:'系统', createdAt:'2025-04-17 16:46:40', mode:'直发'},
+  {id:7, effectType:'渠道', scope:'900037（OPPO-NKA）', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'YH000090', date:'2025-07-09 10:55:33', createdBy:'YH000090', createdAt:'2025-07-09 10:40:12', mode:'直发'},
+];
+const tbody = document.getElementById('tbody');
+function ordered(list){
+  return list.slice().sort((a, b) => {
+    if(a.createdAt === b.createdAt) return b.id - a.id;
+    return a.createdAt < b.createdAt ? 1 : -1;
+  });
+}
+function renderRows(list, total){
+  const view = ordered(list);
+  document.getElementById('pgTotal').textContent = '共 ' + (total == null ? rows.length : view.length) + ' 条';
+  tbody.innerHTML = view.map(r => `
+  <tr class="${r.hl?'highlight':''}" ondblclick="doAction('双击行：配置 ${r.id}')">
+    <td>${r.id}</td>
+    <td>${r.effectType}</td>
+    <td><div class="channel-line">${r.scope}</div>${r.isFallback?'<span class="tag-default">兜底</span>':''}</td>
+    <td>${r.mode==='过仓'?'<span class="tag-mode">过仓</span>':'直发'}</td>
+    <td>${r.supplier}</td>
+    <td>${conditionText(r)}</td>
+    <td><div class="time-name">${r.createdBy}</div><div class="time-date">${r.createdAt}</div></td>
+    <td><div class="time-name">${r.name}</div><div class="time-date">${r.date}</div></td>
+    <td><button class="btn-edit" onclick="event.stopPropagation();openModal('编辑',${r.id})">编辑</button>${r.isFallback?'':`<button class="btn-del" onclick="event.stopPropagation();openDelete(${r.id})">删除</button>`}</td>
+  </tr>`).join('');
+}
+let deletingId = null;
+function openDelete(id){
+  const row = rows.find(r => r.id === id);
+  if(!row || row.isFallback) return;
+  deletingId = id;
+  document.getElementById('deleteText').textContent = '确认删除配置 ' + id + '？删除后立即生效，只影响之后的预约，已有物流单不改。';
+  document.getElementById('deleteMask').classList.add('show');
+}
+function closeDelete(){
+  deletingId = null;
+  document.getElementById('deleteMask').classList.remove('show');
+}
+function confirmDelete(){
+  const id = deletingId;
+  const idx = rows.findIndex(r => r.id === id);
+  if(idx >= 0 && !rows[idx].isFallback) rows.splice(idx, 1);
+  closeDelete();
+  renderRows(filteredRows());
+  showToast('【演示】已删除配置 ' + id);
+}
+renderRows(rows);
+function scopeTargets(r){
+  if(r.isFallback) return [];
+  if(r.scopeItems && r.scopeItems.length){
+    return r.scopeItems.map(item => ({id: String(item.id), name: item.name || ''}));
+  }
+  const text = (r.scope || '').trim();
+  if(!text || text === '-') return [];
+  return text.split('、').map(part => {
+    const trimmed = part.trim();
+    const channel = trimmed.match(/^(\d+)[（(](.+)[）)]$/);
+    if(channel) return {id: channel[1], name: channel[2]};
+    const spaced = trimmed.match(/^(\d+)\s+(.+)$/);
+    if(spaced) return {id: spaced[1], name: spaced[2]};
+    return {id: '', name: trimmed};
+  });
+}
+function matchScope(r, q){
+  return scopeTargets(r).some(item => item.id === q || (item.name && item.name.indexOf(q) !== -1));
+}
+function filteredRows(){
+  const modeText = document.querySelector('#selMode .ph').textContent;
+  const mode = modeText === '直发' || modeText === '过仓' ? modeText : '';
+  const idText = document.getElementById('inputId').value.trim();
+  const scopeText = document.getElementById('inputScope').value.trim();
+  const supplierText = document.querySelector('#selSupplier .ph').textContent;
+  const supplier = supplierText === '物流供应商' ? '' : supplierText;
+  const effectText = document.querySelector('#selEffect .ph').textContent;
+  const effect = effectText === '生效类型' ? '' : effectText;
+  return rows.filter(r=>{
+    if(mode && r.mode !== mode) return false;
+    if(idText && String(r.id) !== idText) return false;
+    if(supplier && r.supplier !== supplier) return false;
+    if(effect && r.effectType !== effect) return false;
+    if(scopeText && !matchScope(r, scopeText)) return false;
+    return true;
+  });
+}
+function applyFilter(){
+  const list = filteredRows();
+  const modeText = document.querySelector('#selMode .ph').textContent;
+  const mode = modeText === '直发' || modeText === '过仓' ? modeText : '';
+  const filtering = !!(mode || document.getElementById('inputId').value.trim() || document.getElementById('inputScope').value.trim() || document.querySelector('#selSupplier .ph').textContent !== '物流供应商' || document.querySelector('#selEffect .ph').textContent !== '生效类型');
+  renderRows(list, filtering ? list.length : rows.length);
+  showToast('【演示】搜索，当前 ' + ordered(list).length + ' 条');
+}
+
+/* ---------- 交互 ---------- */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+function doAction(name){ showToast('【演示】' + name); }
+function menuClick(name, el){
+  document.querySelectorAll('.menu-item').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  if(name !== '线下回收物流配置') showToast('【演示】切换到：' + name);
+}
+function changePage(p){ showToast('【演示】翻页：' + p); }
+
+function bindSelect(triggerId, ddId, multiple){
+  const trigger = document.getElementById(triggerId);
+  const dd = document.getElementById(ddId);
+  trigger.addEventListener('click', e=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dropdown').forEach(d=>{ if(d!==dd) d.classList.remove('open'); });
+    dd.classList.toggle('open');
+  });
+  dd.querySelectorAll('.opt').forEach(opt=>{
+    opt.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(multiple){
+        opt.classList.toggle('checked');
+        const chosen = [...dd.querySelectorAll('.opt.checked')].map(o=>o.dataset.v);
+        trigger.querySelector('.ph').textContent = chosen.length ? chosen.join('、') : '渠道';
+        trigger.classList.toggle('has-value', chosen.length>0);
+      } else {
+        dd.querySelectorAll('.opt').forEach(o=>o.classList.remove('checked'));
+        opt.classList.add('checked');
+        trigger.querySelector('.ph').textContent = opt.dataset.v;
+        trigger.classList.add('has-value');
+        dd.classList.remove('open');
+      }
+    });
+  });
+}
+bindSelect('selEffect','ddEffect',false);
+bindSelect('selSupplier','ddSupplier',false);
+bindSelect('selMode','ddMode',false);
+document.addEventListener('click', ()=> document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('open')));
+
+/* ============ 新增 / 编辑 弹窗 ============ */
+const provinceList = [
+  {name:'北京市', children:['东城区','西城区','朝阳区','海淀区','丰台区']},
+  {name:'江苏省', children:['南京市','苏州市','无锡市','常州市','徐州市']},
+  {name:'广东省', children:['广州市','深圳市','东莞市','佛山市','中山市']},
+  {name:'辽宁省', children:['沈阳市','大连市','鞍山市','抚顺市']},
+  {name:'湖北省', children:['武汉市','宜昌市','襄阳市','荆州市','黄石市']},
+  {name:'福建省', children:['福州市','厦门市','泉州市','漳州市']},
+  {name:'甘肃省', children:['兰州市','天水市','白银市','酒泉市']},
+  {name:'浙江省', children:['杭州市','宁波市','温州市','嘉兴市']},
+  {name:'山东省', children:['济南市','青岛市','烟台市','潍坊市']},
+  {name:'河南省', children:['郑州市','洛阳市','开封市','新乡市']},
+  {name:'四川省', children:['成都市','绵阳市','德阳市','宜宾市']},
+  {name:'湖南省', children:['长沙市','株洲市','湘潭市','衡阳市']},
+  {name:'安徽省', children:['合肥市','芜湖市','蚌埠市','阜阳市']},
+  {name:'河北省', children:['石家庄市','唐山市','保定市','廊坊市']},
+  {name:'陕西省', children:['西安市','宝鸡市','咸阳市','渭南市']},
+  {name:'江西省', children:['南昌市','赣州市','九江市','上饶市']},
+];
+// 树的三级数据：省 -> 市 -> 区
+let areaNodes = provinceList.map(p => ({
+  name: p.name, checked: false, expanded: false,
+  children: p.children.map(city => ({
+    name: city, checked: false, expanded: false,
+    children: ['全市'].map(d => ({name: d, checked: false}))
+  }))
+}));
+function resetAreaNodes(){ areaNodes.forEach(p=>{ p.checked=false; p.expanded=false; p.children.forEach(c=>{ c.checked=false; c.expanded=false; c.children.forEach(d=>d.checked=false); }); }); }
+function nodeAt(path){ let n = areaNodes[path[0]]; for(let i=1;i<path.length;i++) n = n.children[path[i]]; return n; }
+function renderAreaTree(){
+  function row(node, path, level){
+    const hasChild = node.children && node.children.length > 0;
+    let subChecked = false;
+    if(hasChild && !node.checked) subChecked = node.children.some(c=>c.checked || c.children.some(d=>d.checked));
+    const cbCls = node.checked ? 'checked' : (subChecked ? 'partial' : '');
+    let html = `<div class="tree-node">
+      <div class="tree-row tree-level-${level}" onclick="treeToggleExpand(${JSON.stringify(path)},event)">
+        <span class="tree-arrow ${node.expanded?'open':''}">${hasChild?'▶':''}</span>
+        <span class="tree-cb ${cbCls}" onclick="treeToggleCheck(${JSON.stringify(path)},event)"></span>
+        <span class="tree-label">${node.name}</span>
+      </div>`;
+    if(node.expanded && hasChild){
+      html += node.children.map((c,i)=>row(c, path.concat(i), level+1)).join('');
+    }
+    return html + '</div>';
+  }
+  document.getElementById('areaTree').innerHTML = areaNodes.map((p,i)=>row(p,[i],0)).join('');
+}
+function treeToggleExpand(path, e){
+  if(e.target.classList.contains('tree-cb')) return;
+  const n = nodeAt(path);
+  if(n.children && n.children.length){ n.expanded = !n.expanded; renderAreaTree(); }
+}
+function treeToggleCheck(path, e){
+  e.stopPropagation();
+  const n = nodeAt(path);
+  const target = !(n.checked || n.children.some(c=>c.checked || c.children.some(d=>d.checked)));
+  function setNode(node, val){ node.checked = val; (node.children||[]).forEach(c=>setNode(c,val)); }
+  setNode(n, target);
+  renderAreaTree();
+}
+function parentState(node){
+  if(!node.children || !node.children.length) return node.checked;
+  return node.children.every(c=>parentState(c));
+}
+
+const partners = ['OPPO','vivo','小天才','一加','realme','小当回收'];
+const modalChannels = ['900030（小当置换-OPPO）','900032（小当置换-一加）','900033（小当置换-vivo）','900034（小当置换-小天才）','900035（小当置换-Realme）','900037（OPPO-NKA）','900038（易换新-移动合作方）','900040（易换新-当收）'];
+const agentRows = [
+  {id:'862', name:'OPPO邹邹佣金测试代理002', status:'合作中'},
+  {id:'861', name:'邹邹佣金测试代理002', status:'合作中'},
+  {id:'860', name:'测试111222', status:'合作中'},
+  {id:'859', name:'测试代理_永强园科_325', status:'合作中'},
+  {id:'858', name:'测试代理123', status:'合作中'},
+  {id:'857', name:'测试代理', status:'合作中'},
+  {id:'856', name:'测试测试923', status:'合作中'},
+  {id:'855', name:'批量离店-1000个门店', status:'合作中'},
+  {id:'854', name:'测试代理商922', status:'合作中'},
+  {id:'853', name:'信誉楼测试代理', status:'合作中'},
+  {id:'852', name:'南山测试代理', status:'合作中'},
+  {id:'851', name:'福田测试代理', status:'已停止'}
+];
+const secondRows = [
+  {id:'6617', name:'284zfx演示机专用二级', stores:1, agentId:'284', agentName:'测试代理商999', status:'合作中'},
+  {id:'6616', name:'288zfx演示机专用二级', stores:1, agentId:'288', agentName:'新代理wyw288', status:'合作中'},
+  {id:'6615', name:'测试000001', stores:0, agentId:'809', agentName:'vivo-测试', status:'合作中'},
+  {id:'6614', name:'我来测试估计', stores:0, agentId:'534', agentName:'vivo-易开新代理', status:'合作中'},
+  {id:'6613', name:'我来测试23', stores:1, agentId:'535', agentName:'当收代理商集合', status:'合作中'},
+  {id:'6612', name:'OPPO邹邹佣金二级', stores:1, agentId:'862', agentName:'OPPO邹邹佣金测试代理002', status:'合作中'},
+  {id:'6611', name:'测试010', stores:0, agentId:'847', agentName:'当收（新）zfx', status:'合作中'},
+  {id:'6610', name:'测试1123', stores:0, agentId:'809', agentName:'vivo-测试', status:'合作中'},
+  {id:'6609', name:'测试001', stores:2, agentId:'809', agentName:'vivo-测试', status:'合作中'},
+  {id:'6608', name:'测试TT', stores:1, agentId:'809', agentName:'vivo-测试', status:'合作中'},
+  {id:'6607', name:'南山二级', stores:3, agentId:'852', agentName:'南山测试代理', status:'合作中'}
+];
+const storeRows = [
+  {id:'483943', name:'284zfx演示机专用门店', secondId:'6617', secondName:'284zfx演示机专用二级', status:'合作中'},
+  {id:'483942', name:'288zfx演示机专用门店', secondId:'6616', secondName:'288zfx演示机专用二级', status:'合作中'},
+  {id:'483941', name:'OPPO官方授权体验店', secondId:'6612', secondName:'OPPO邹邹佣金二级', status:'合作中'},
+  {id:'483940', name:'测试-00001260', secondId:'6527', secondName:'vivo系-测试11', status:'合作中'},
+  {id:'483939', name:'测试-00001258', secondId:'6527', secondName:'vivo系-测试11', status:'合作中'},
+  {id:'483938', name:'测试0000125', secondId:'6571', secondName:'当收新-wyw二级', status:'合作中'},
+  {id:'483937', name:'测试00258', secondId:'6527', secondName:'vivo系-测试11', status:'合作中'},
+  {id:'483936', name:'李四的店', secondId:'3355', secondName:'auto名称27011617', status:'合作中'},
+  {id:'483935', name:'测试门店ddd', secondId:'6594', secondName:'fgs005', status:'合作中'},
+  {id:'483934', name:'请问额额尔', secondId:'6613', secondName:'我来测试23', status:'合作中'},
+  {id:'483933', name:'信利康大厦店', secondId:'6607', secondName:'南山二级', status:'合作中'}
+];
+const scopeState = { 合作方:'', 渠道:'', 代理商:[], 二级代理:[], 门店:[] };
+let currentModalMode = '新增';
+let editingId = null;
+let identityLocked = false;
+let pickerType = '';
+let pickerChecked = new Set();
+let pickerFiltered = [];
+let pickerPageNo = 1;
+const pickerPageSize = 10;
+
+function effectType(){ return document.getElementById('effectType').value; }
+function onEffectType(){ renderScope(); }
+function setScopeValue(type, value){
+  document.getElementById('effectType').value = type;
+  if(type==='合作方' || type==='渠道') scopeState[type] = value || '';
+  renderScope();
+}
+function renderScope(){
+  const type = effectType();
+  const box = document.getElementById('scopeBox');
+  if(type==='兜底'){
+    box.innerHTML = '<div class="scope-locked">不区分生效类型</div>';
+    return;
+  }
+  if(type==='合作方' || type==='渠道'){
+    const options = type==='合作方' ? partners : modalChannels;
+    const cur = scopeState[type];
+    box.innerHTML = `<select class="scope-select" ${identityLocked?'disabled':''} onchange="scopeState['${type}']=this.value">
+      <option value="">请选择</option>
+      ${options.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('')}
+    </select>`;
+    return;
+  }
+  const tags = (scopeState[type] || []).map((item,i)=>`<span class="scope-tag">${item.name}${identityLocked?'':`<span class="x" onclick="removeScopeTag(${i})">×</span>`}</span>`).join('');
+  if(identityLocked){
+    box.innerHTML = `<div class="scope-tags is-locked">${tags}</div>`;
+    return;
+  }
+  const btn = type==='代理商' ? '添加代理商' : (type==='门店' ? '添加门店' : '添加二级');
+  box.innerHTML = `<button type="button" class="add-scope" onclick="openPicker()">+ ${btn}</button><div class="scope-tags">${tags}</div>`;
+}
+function removeScopeTag(i){
+  scopeState[effectType()].splice(i,1);
+  renderScope();
+}
+function resetScope(){
+  scopeState.合作方 = '';
+  scopeState.渠道 = '';
+  scopeState.代理商 = [];
+  scopeState.二级代理 = [];
+  scopeState.门店 = [];
+  document.getElementById('effectType').value = '渠道';
+  renderScope();
+}
+function pickerColumns(){
+  if(pickerType==='代理商') return [['id','代理商ID'],['name','代理商名称'],['status','状态']];
+  if(pickerType==='门店') return [['id','门店ID'],['name','门店名称'],['secondId','二级ID'],['secondName','二级名称'],['status','状态']];
+  return [['id','二级ID'],['name','二级名称'],['stores','下属门店数'],['agentId','代理商ID'],['agentName','代理商名称'],['status','状态']];
+}
+function pickerSource(){
+  if(pickerType==='代理商') return agentRows;
+  if(pickerType==='门店') return storeRows;
+  return secondRows;
+}
+function openPicker(){
+  if(identityLocked) return;
+  pickerType = effectType();
+  pickerChecked = new Set(scopeState[pickerType].map(item=>item.id));
+  pickerPageNo = 1;
+  const title = pickerType==='代理商' ? '添加代理商' : (pickerType==='门店' ? '添加门店' : '添加二级');
+  document.getElementById('pickerTitle').textContent = title;
+  const filters = pickerType==='代理商'
+    ? [{key:'id', label:'代理商ID', ph:'多个ID请用","分隔'}]
+    : pickerType==='门店'
+      ? [{key:'id', label:'门店ID', ph:'多个ID请用","分隔'}, {key:'secondId', label:'二级ID', ph:'多个ID请用","分隔'}]
+      : [{key:'id', label:'二级ID', ph:'多个ID请用","分隔'}, {key:'agentId', label:'代理商ID', ph:'多个ID请用","分隔'}];
+  document.getElementById('pickerFilters').innerHTML = filters.map(f=>`
+    <label>${f.label}</label><input id="pf-${f.key}" placeholder="${f.ph}">
+  `).join('') + `
+    <label>状态</label>
+    <select id="pf-status"><option value="">请选择活动状态</option><option>合作中</option><option>已停止</option></select>
+    <button class="btn btn-primary" onclick="runPickerQuery()">查询</button>
+    <button class="btn btn-default" onclick="resetPickerQuery()">重置</button>`;
+  runPickerQuery();
+  document.getElementById('pickerMask').classList.add('show');
+}
+function closePicker(){ document.getElementById('pickerMask').classList.remove('show'); }
+function matchIds(raw, value){
+  const ids = String(raw||'').split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+  if(!ids.length) return true;
+  return ids.some(id => String(value).indexOf(id) >= 0);
+}
+function runPickerQuery(){
+  const status = document.getElementById('pf-status') ? document.getElementById('pf-status').value : '';
+  pickerFiltered = pickerSource().filter(row=>{
+    if(status && row.status !== status) return false;
+    const idInput = document.getElementById('pf-id');
+    if(idInput && !matchIds(idInput.value, row.id)) return false;
+    const secondInput = document.getElementById('pf-secondId');
+    if(secondInput && !matchIds(secondInput.value, row.secondId)) return false;
+    const agentInput = document.getElementById('pf-agentId');
+    if(agentInput && !matchIds(agentInput.value, row.agentId)) return false;
+    return true;
+  });
+  pickerPageNo = 1;
+  renderPicker();
+}
+function resetPickerQuery(){
+  document.querySelectorAll('#pickerFilters input').forEach(el=>el.value='');
+  const status = document.getElementById('pf-status');
+  if(status) status.value = '';
+  runPickerQuery();
+}
+function pickerPage(step){
+  const pages = Math.max(1, Math.ceil(pickerFiltered.length / pickerPageSize));
+  pickerPageNo = Math.min(pages, Math.max(1, pickerPageNo + step));
+  renderPicker();
+}
+function togglePickerRow(id, checked){
+  if(checked) pickerChecked.add(id); else pickerChecked.delete(id);
+  renderPicker();
+}
+function togglePickerPage(checked){
+  const start = (pickerPageNo - 1) * pickerPageSize;
+  pickerFiltered.slice(start, start + pickerPageSize).forEach(row=>{
+    if(checked) pickerChecked.add(row.id); else pickerChecked.delete(row.id);
+  });
+  renderPicker();
+}
+function renderPicker(){
+  const cols = pickerColumns();
+  const start = (pickerPageNo - 1) * pickerPageSize;
+  const pageRows = pickerFiltered.slice(start, start + pickerPageSize);
+  const pageAll = pageRows.length > 0 && pageRows.every(row => pickerChecked.has(row.id));
+  document.getElementById('pickerHead').innerHTML = `<tr>
+    <th style="width:42px"><input type="checkbox" ${pageAll?'checked':''} onclick="togglePickerPage(this.checked)"></th>
+    ${cols.map(c=>`<th>${c[1]}</th>`).join('')}
+  </tr>`;
+  document.getElementById('pickerBody').innerHTML = pageRows.map(row=>`<tr class="${pickerChecked.has(row.id)?'picked':''}">
+    <td><input type="checkbox" ${pickerChecked.has(row.id)?'checked':''} onclick="togglePickerRow('${row.id}', this.checked)"></td>
+    ${cols.map(c=>`<td>${row[c[0]]}</td>`).join('')}
+  </tr>`).join('') || `<tr><td colspan="${cols.length+1}" style="text-align:center;color:#808695">没有匹配的数据</td></tr>`;
+  const pages = Math.max(1, Math.ceil(pickerFiltered.length / pickerPageSize));
+  document.getElementById('pickerChosen').textContent = '已勾选 ' + pickerChecked.size + ' 条';
+  document.getElementById('pickerTotal').textContent = '共 ' + pickerFiltered.length + ' 条';
+  document.getElementById('pickerPages').innerHTML = Array.from({length: pages}, (_,i)=>`<button class="pg-btn ${i+1===pickerPageNo?'active':''}" onclick="pickerPage(${i+1-pickerPageNo})">${i+1}</button>`).join('');
+}
+function confirmPicker(){
+  const chosen = pickerSource().filter(row => pickerChecked.has(row.id));
+  scopeState[pickerType] = chosen.map(row => ({id: row.id, name: row.name}));
+  closePicker();
+  renderScope();
+}
+function toggleDropdown(e, id){
+  e.stopPropagation();
+  document.querySelectorAll('.msel-drop').forEach(d=>{ if(d.id!==id) d.classList.remove('open'); });
+  document.getElementById(id).classList.toggle('open');
+}
+function initModalDropdowns(){
+  document.querySelectorAll('#mSupplierDrop .op').forEach(op=>op.addEventListener('click',e=>{
+    e.stopPropagation();
+    document.getElementById('mSupplierText').textContent = op.dataset.v;
+    document.getElementById('mSupplierDrop').classList.remove('open');
+  }));
+}
+function currentShipMode(){
+  const picked = document.querySelector('input[name="shipMode"]:checked');
+  return picked ? picked.value : '直发';
+}
+function currentCondition(){
+  const picked = document.querySelector('input[name="condition"]:checked');
+  return picked ? picked.value : '全部';
+}
+function setCondition(kind){
+  const mode = currentShipMode();
+  const options = mode === '过仓'
+    ? [['全部','全部'], ['指定区域','指定区域']]
+    : [['全部','全部'], ['指定回收商','指定回收商'], ['指定区域','指定区域']];
+  if(!options.some(item => item[0] === kind)) kind = '全部';
+  document.getElementById('conditionRadios').innerHTML = options.map(([value, label]) =>
+    `<label><input type="radio" name="condition" value="${value}" ${value===kind?'checked':''} onchange="setCondition('${value}')">${label}</label>`
+  ).join('');
+  document.getElementById('recyclerItem').style.display = kind === '指定回收商' ? 'flex' : 'none';
+  document.getElementById('areaItem').style.display = kind === '指定区域' ? 'flex' : 'none';
+  const note = document.getElementById('conditionNote');
+  note.style.display = kind === '全部' ? 'block' : 'none';
+  note.textContent = mode === '过仓'
+    ? '全部：该寄货方下全部区域'
+    : '全部：该寄货方下全部回收商、全部区域';
+}
+function setShipMode(mode, condition){
+  document.querySelectorAll('input[name="shipMode"]').forEach(el=>el.checked = el.value===mode);
+  const keep = condition || currentCondition();
+  setCondition(mode === '过仓' && keep === '指定回收商' ? '全部' : keep);
+}
+function conditionText(row){
+  const kind = conditionOf(row);
+  if(kind === '指定回收商') return '指定回收商：' + row.recycler;
+  if(kind === '指定区域') return '指定区域：' + row.area;
+  return '全部';
+}
+function conditionOf(row){
+  const hasRecycler = row.mode === '直发' && row.recycler && row.recycler !== '全部' && row.recycler !== '/';
+  const hasArea = row.area && row.area !== '全国' && row.area !== '/' && row.area !== '全部';
+  if(hasRecycler) return '指定回收商';
+  if(hasArea) return '指定区域';
+  return '全部';
+}
+function ensureFallbackOption(show){
+  const select = document.getElementById('effectType');
+  let opt = select.querySelector('option[value="兜底"]');
+  if(show && !opt){
+    opt = document.createElement('option');
+    opt.value = '兜底';
+    opt.textContent = '兜底';
+    select.insertBefore(opt, select.firstChild);
+  }
+  if(!show && opt) opt.remove();
+}
+function setFormLocked(locked){
+  ensureFallbackOption(locked);
+  document.getElementById('effectType').disabled = locked || identityLocked;
+  document.querySelectorAll('input[name="shipMode"]').forEach(el => { el.disabled = locked; });
+  document.querySelectorAll('input[name="condition"]').forEach(el => { el.disabled = locked; });
+  document.querySelectorAll('.mode-radios').forEach(el => el.classList.toggle('is-locked', locked));
+  document.getElementById('fallbackNote').style.display = locked ? 'block' : 'none';
+}
+function openModal(mode, id){
+  currentModalMode = mode;
+  editingId = mode === '编辑' ? id : null;
+  identityLocked = mode === '编辑';
+  document.getElementById('modalTitle').textContent = mode;
+  resetAreaNodes();
+  document.getElementById('mRecycler').value = '';
+  resetScope();
+  const row = rows.find(r=>r.id===id);
+    if(mode === '编辑' && row){
+    ensureFallbackOption(!!row.isFallback);
+    document.getElementById('effectType').value = row.effectType;
+    if(row.scopeKind==='tags') scopeState[row.effectType] = row.scopeItems.slice();
+    else scopeState[row.effectType] = row.scope;
+    document.getElementById('mSupplierText').textContent = row.supplier;
+    document.getElementById('mSupplierText').classList.remove('ph');
+    const condition = conditionOf(row);
+    setShipMode(row.mode, condition);
+    if(condition === '指定回收商') document.getElementById('mRecycler').value = row.recycler;
+    if(condition === '指定区域'){
+      const hit = areaNodes.find(p=>row.area.indexOf(p.name.replace('省',''))>=0 || row.area.indexOf(p.name)>=0);
+      if(hit){ hit.checked = true; hit.children.forEach(c=>{ c.checked=true; c.children.forEach(d=>d.checked=true); }); }
+    }
+  } else if(mode === '编辑'){
+    scopeState.渠道 = '900030（小当置换-OPPO）';
+    document.getElementById('effectType').value = '渠道';
+    document.getElementById('mSupplierText').textContent = '顺丰科技有限公司';
+    document.getElementById('mSupplierText').classList.remove('ph');
+    setShipMode('直发', '指定区域');
+    const hb = areaNodes.find(p=>p.name==='湖北省');
+    if(hb){ hb.checked = true; hb.children.forEach(c=>{ c.checked=true; c.children.forEach(d=>d.checked=true); }); }
+  } else {
+    document.getElementById('mSupplierText').textContent = '顺丰科技有限公司';
+    document.getElementById('mSupplierText').classList.remove('ph');
+    setShipMode('直发', '全部');
+  }
+  renderScope();
+  renderAreaTree();
+  const editing = rows.find(r => r.id === editingId);
+  document.getElementById('effectType').disabled = identityLocked;
+  setFormLocked(!!(editing && editing.isFallback));
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
+function saveModal(){
+  const supplier = document.getElementById('mSupplierText').textContent;
+  const editing = rows.find(r => r.id === editingId);
+  if(editing && editing.isFallback){
+    showToast('【演示】已修改兜底物流：' + supplier);
+    closeModal();
+    return;
+  }
+  const type = effectType();
+  if(!type){
+    showToast('请选择生效类型');
+    return;
+  }
+  const ship = document.querySelector('input[name="shipMode"]:checked');
+  if(!ship){
+    showToast('请选择发货方式');
+    return;
+  }
+  const mode = ship.value;
+  const scope = scopeState[type];
+  const scopeText = Array.isArray(scope) ? (scope.map(item=>item.name).join('、') || '未选择') : (scope || '未选择');
+  if(!scope || (Array.isArray(scope) && !scope.length)){
+    showToast('请选择生效范围');
+    return;
+  }
+  showToast('【演示】保存' + mode + '配置，生效类型：' + type + '，范围：' + scopeText + '，物流：' + supplier);
+  closeModal();
+}
+initModalDropdowns();
+document.addEventListener('click', ()=> document.querySelectorAll('.msel-drop').forEach(d=>d.classList.remove('open')));
+document.getElementById('modalMask').addEventListener('click', e=>{ if(e.target.id==='modalMask') closeModal(); });
+
+/* 重置 */
+document.querySelector('.filter-bar .btn-default').addEventListener('click', ()=>{
+  document.getElementById('inputId').value = '';
+  document.getElementById('inputScope').value = '';
+  document.querySelectorAll('.select-trigger').forEach(t=>{
+    t.classList.remove('has-value');
+    const ph = t.querySelector('.ph');
+    ph.textContent = ph.dataset.placeholder || '渠道';
+  });
+  document.querySelectorAll('.dropdown .opt').forEach(o=>o.classList.remove('checked'));
+  renderRows(rows);
+});
+const boot = new URLSearchParams(location.search);
+if(boot.get('modal')==='add'){
+  openModal('新增');
+  if(boot.get('mode')==='过仓') setShipMode('过仓');
+  if(boot.get('scope')) setScopeValue(boot.get('scope'), '');
+  if(boot.get('tags')==='1' && boot.get('scope')==='代理商'){
+    scopeState.代理商 = agentRows.slice(0, 6).map(row => ({id: row.id, name: row.name}));
+    renderScope();
+  }
+  if(boot.get('picker')==='1') openPicker();
+}
+if(boot.get('modal')==='edit') { openModal('编辑', Number(boot.get('id') || 11)); }
+if(boot.get('scopeQuery')){
+  document.getElementById('inputScope').value = boot.get('scopeQuery');
+  applyFilter();
+}
+if(boot.get('del')) openDelete(Number(boot.get('del')));
+</script>
+</body>
+</html>
