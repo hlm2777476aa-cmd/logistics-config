@@ -607,7 +607,7 @@
       <div class="form-item">
         <label><span class="req">*</span>发货方式</label>
         <div class="fc">
-          <div class="mode-radios">
+          <div class="mode-radios" id="shipModeRadios">
             <label><input type="radio" name="shipMode" value="直发" checked onchange="setShipMode('直发')">直发</label>
             <label><input type="radio" name="shipMode" value="过仓" onchange="setShipMode('过仓')">过仓</label>
           </div>
@@ -633,7 +633,7 @@
         <div class="fc">
           <div class="mode-radios" id="conditionRadios"></div>
           <div id="conditionNote" style="display:none;color:#808695;font-size:12px;line-height:20px;margin-top:4px"></div>
-          <div id="fallbackNote" style="display:none;color:#808695;font-size:12px;line-height:20px;margin-top:4px">兜底只支持修改物流供应商</div>
+          <div id="fallbackNote" style="display:none;color:#808695;font-size:12px;line-height:20px;margin-top:4px">兜底可修改发货方式和物流供应商，配置条件固定为全部</div>
         </div>
       </div>
 
@@ -1231,10 +1231,19 @@ function ensureFallbackOption(show){
 function setFormLocked(locked){
   ensureFallbackOption(locked);
   document.getElementById('effectType').disabled = locked || identityLocked;
-  document.querySelectorAll('input[name="shipMode"]').forEach(el => { el.disabled = locked; });
   document.querySelectorAll('input[name="condition"]').forEach(el => { el.disabled = locked; });
-  document.querySelectorAll('.mode-radios').forEach(el => el.classList.toggle('is-locked', locked));
+  document.getElementById('conditionRadios').classList.toggle('is-locked', locked);
   document.getElementById('fallbackNote').style.display = locked ? 'block' : 'none';
+  if(locked){
+    setCondition('全部');
+    document.getElementById('recyclerItem').style.display = 'none';
+    document.getElementById('areaItem').style.display = 'none';
+  }
+}
+function fmtNow(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 function openModal(mode, id){
   currentModalMode = mode;
@@ -1284,7 +1293,19 @@ function saveModal(){
   const supplier = document.getElementById('mSupplierText').textContent;
   const editing = rows.find(r => r.id === editingId);
   if(editing && editing.isFallback){
-    showToast('【演示】已修改兜底物流：' + supplier);
+    const ship = document.querySelector('input[name="shipMode"]:checked');
+    if(!ship){
+      showToast('请选择发货方式');
+      return;
+    }
+    editing.mode = ship.value;
+    editing.supplier = supplier;
+    editing.recycler = '全部';
+    editing.area = '全国';
+    editing.name = '演示用户';
+    editing.date = fmtNow();
+    renderRows(filteredRows());
+    showToast('【演示】已修改兜底：' + ship.value + '，' + supplier);
     closeModal();
     return;
   }
