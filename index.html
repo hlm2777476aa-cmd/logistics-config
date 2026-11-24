@@ -183,9 +183,19 @@
   col.c-scope { width: auto; }
   col.c-mode { width: 72px; }
   col.c-supplier { width: 140px; }
-  col.c-condition { width: 168px; }
-  col.c-time { width: 132px; }
+  col.c-condition { width: 148px; }
+  col.c-reserve { width: 96px; }
+  col.c-time { width: 120px; }
   col.c-op { width: 118px; }
+  .reserve-time-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .reserve-time-input {
+    height: 32px; width: 132px; border: 1px solid #dcdee2; border-radius: 4px;
+    padding: 0 8px; font-size: 13px; color: #515a6e;
+  }
+  .reserve-del { color: #ed4014; font-size: 12px; cursor: pointer; user-select: none; }
+  .reserve-del:hover { color: #f16543; }
+  .reserve-add { height: 28px; padding: 0 10px; font-size: 12px; margin-top: 2px; }
+  .field-hint { color: #808695; font-size: 12px; line-height: 18px; margin-top: 6px; }
   thead th {
     background: #f8f8f9;
     color: #515a6e;
@@ -531,7 +541,7 @@
       <table>
         <colgroup>
           <col class="c-id"><col class="c-type"><col class="c-scope"><col class="c-mode"><col class="c-supplier">
-          <col class="c-condition"><col class="c-time"><col class="c-time"><col class="c-op">
+          <col class="c-condition"><col class="c-reserve"><col class="c-time"><col class="c-time"><col class="c-op">
         </colgroup>
         <thead>
           <tr>
@@ -541,6 +551,7 @@
             <th>发货方式</th>
             <th>物流供应商</th>
             <th>配置条件</th>
+            <th>自动预约物流时间</th>
             <th>创建时间</th>
             <th>最后修改时间</th>
             <th>操作</th>
@@ -583,7 +594,8 @@
         <div>1、生效类型选择寄货方，命中优先级为门店&gt;二级代理&gt;代理商&gt;渠道&gt;合作方</div>
         <div>2、直发的配置条件为全部、指定回收商、指定区域，三选一。命中优先级为：指定回收商&gt;指定区域&gt;全部。全部表示该寄货方下全部回收商、全部区域。指定区域按发货地址生效</div>
         <div>3、过仓的配置条件为全部、指定区域，二选一。命中时指定区域优先于全部。全部表示该寄货方下全部区域。指定区域按发货地址生效</div>
-        <div>4、修改/删除配置后立即生效</div>
+        <div>4、发货方式为过仓时，可配置多个自动预约物流时间</div>
+        <div>5、修改/删除配置后立即生效</div>
       </div>
 
       <div class="form-item">
@@ -625,6 +637,15 @@
               <div class="op" data-v="京东快递">京东快递</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="form-item" id="reserveTimesItem" style="display:none">
+        <label><span class="req">*</span>自动预约物流时间</label>
+        <div class="fc">
+          <div id="reserveTimesBox"></div>
+          <button type="button" class="btn btn-default reserve-add" onclick="addReserveTimeRow()">+ 添加时间</button>
+          <div class="field-hint">过仓订单将在这些时刻自动发起物流预约，可配置多个，不可重复</div>
         </div>
       </div>
 
@@ -754,9 +775,9 @@ sidebar.innerHTML = menus.map(m => `
 
 /* ---------- 表格数据 ---------- */
 const rows = [
-  {id:0, effectType:'兜底', scope:'-', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'系统', date:'2025-04-17 16:46:55', createdBy:'系统', createdAt:'2025-04-01 10:00:00', mode:'直发', isFallback:true},
-  {id:11, effectType:'门店', scope:'483941 OPPO官方授权体验店', scopeKind:'tags', scopeItems:[{id:'483941', name:'OPPO官方授权体验店'}], supplier:'京东快递', area:'广东省', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:40:12', createdBy:'孙亭辉', createdAt:'2026-11-18 09:12:06', mode:'过仓', hl:true},
-  {id:10, effectType:'二级代理', scope:'6612 OPPO邹邹佣金二级', scopeKind:'tags', scopeItems:[{id:'6612', name:'OPPO邹邹佣金二级'}], supplier:'顺丰科技有限公司', area:'全国', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', mode:'过仓'},
+  {id:0, effectType:'兜底', scope:'-', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'系统', date:'2025-04-17 16:46:55', createdBy:'系统', createdAt:'2025-04-01 10:00:00', mode:'直发', reserveTimes:[], isFallback:true},
+  {id:11, effectType:'门店', scope:'483941 OPPO官方授权体验店', scopeKind:'tags', scopeItems:[{id:'483941', name:'OPPO官方授权体验店'}], supplier:'京东快递', area:'广东省', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:40:12', createdBy:'孙亭辉', createdAt:'2026-11-18 09:12:06', mode:'过仓', reserveTimes:['14:00','20:00'], hl:true},
+  {id:10, effectType:'二级代理', scope:'6612 OPPO邹邹佣金二级', scopeKind:'tags', scopeItems:[{id:'6612', name:'OPPO邹邹佣金二级'}], supplier:'顺丰科技有限公司', area:'全国', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', mode:'过仓', reserveTimes:['14:00','20:00']},
   {id:9, effectType:'代理商', scope:'862 OPPO邹邹佣金测试代理002', scopeKind:'tags', scopeItems:[{id:'862', name:'OPPO邹邹佣金测试代理002'}], supplier:'京东快递', area:'全国', recycler:'369', name:'孙亭辉', date:'2026-11-20 18:28:04', createdBy:'孙亭辉', createdAt:'2026-11-17 15:22:18', mode:'直发'},
   {id:8, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', supplier:'京东快递', area:'广东省', recycler:'全部', name:'孙亭辉', date:'2026-11-20 17:12:33', createdBy:'孙亭辉', createdAt:'2026-11-16 11:03:52', mode:'直发'},
   {id:1, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'YH215762', date:'2025-06-12 14:28:23', createdBy:'YH215762', createdAt:'2025-06-12 11:05:08', mode:'直发'},
@@ -783,6 +804,7 @@ function renderRows(list, total){
     <td>${r.mode==='过仓'?'<span class="tag-mode">过仓</span>':'直发'}</td>
     <td>${r.supplier}</td>
     <td>${conditionText(r)}</td>
+    <td>${reserveTimesText(r)}</td>
     <td><div class="time-name">${r.createdBy}</div><div class="time-date">${r.createdAt}</div></td>
     <td><div class="time-name">${r.name}</div><div class="time-date">${r.date}</div></td>
     <td><button class="btn-edit" onclick="event.stopPropagation();openModal('编辑',${r.id})">编辑</button>${r.isFallback?'':`<button class="btn-del" onclick="event.stopPropagation();openDelete(${r.id})">删除</button>`}</td>
@@ -1203,6 +1225,10 @@ function setShipMode(mode, condition){
   document.querySelectorAll('input[name="shipMode"]').forEach(el=>el.checked = el.value===mode);
   const keep = condition || currentCondition();
   setCondition(mode === '过仓' && keep === '指定回收商' ? '全部' : keep);
+  if(mode === '过仓' && !readReserveTimes().length){
+    setReserveTimes(['14:00', '20:00']);
+  }
+  syncReserveTimesField(mode);
 }
 function conditionText(row){
   const kind = conditionOf(row);
@@ -1216,6 +1242,93 @@ function conditionOf(row){
   if(hasRecycler) return '指定回收商';
   if(hasArea) return '指定区域';
   return '全部';
+}
+function reserveTimesText(row){
+  if(row.mode !== '过仓' || !row.reserveTimes || !row.reserveTimes.length) return '-';
+  return row.reserveTimes.join('、');
+}
+function toTimeInput(value){
+  if(!value) return '';
+  const m = String(value).match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return '';
+  return String(m[1]).padStart(2, '0') + ':' + m[2];
+}
+function setReserveTimes(times){
+  const list = (times && times.length) ? times.slice() : [''];
+  const box = document.getElementById('reserveTimesBox');
+  box.innerHTML = list.map((t, idx) => `
+    <div class="reserve-time-row">
+      <input type="time" class="reserve-time-input" value="${toTimeInput(t)}">
+      ${list.length > 1 ? `<span class="reserve-del" onclick="removeReserveTimeRow(this)">删除</span>` : ''}
+    </div>`).join('');
+}
+function addReserveTimeRow(){
+  const box = document.getElementById('reserveTimesBox');
+  const div = document.createElement('div');
+  div.className = 'reserve-time-row';
+  div.innerHTML = `<input type="time" class="reserve-time-input"><span class="reserve-del" onclick="removeReserveTimeRow(this)">删除</span>`;
+  box.appendChild(div);
+  refreshReserveTimeDeletes();
+}
+function removeReserveTimeRow(el){
+  const box = document.getElementById('reserveTimesBox');
+  const row = el.closest('.reserve-time-row');
+  if(row) row.remove();
+  if(!box.querySelector('.reserve-time-row')) setReserveTimes(['']);
+  refreshReserveTimeDeletes();
+}
+function refreshReserveTimeDeletes(){
+  const rows = document.querySelectorAll('#reserveTimesBox .reserve-time-row');
+  rows.forEach((row, idx) => {
+    let del = row.querySelector('.reserve-del');
+    if(rows.length === 1){
+      if(del) del.remove();
+      return;
+    }
+    if(!del){
+      del = document.createElement('span');
+      del.className = 'reserve-del';
+      del.textContent = '删除';
+      del.onclick = function(){ removeReserveTimeRow(this); };
+      row.appendChild(del);
+    }
+  });
+}
+function readReserveTimes(){
+  return Array.from(document.querySelectorAll('#reserveTimesBox .reserve-time-input'))
+    .map(el => (el.value || '').trim())
+    .filter(Boolean);
+}
+function validateReserveTimes(mode){
+  if(mode !== '过仓') return [];
+  const times = readReserveTimes();
+  if(!times.length){
+    showToast('请添加自动预约物流时间');
+    return null;
+  }
+  const seen = new Set();
+  for(const t of times){
+    if(seen.has(t)){
+      showToast('自动预约物流时间不能重复');
+      return null;
+    }
+    seen.add(t);
+  }
+  return times;
+}
+function syncReserveTimesField(mode){
+  mode = mode || currentShipMode();
+  const item = document.getElementById('reserveTimesItem');
+  item.style.display = mode === '过仓' ? 'flex' : 'none';
+  if(mode !== '过仓') return;
+  if(!document.querySelectorAll('#reserveTimesBox .reserve-time-row').length){
+  const editing = rows.find(r => r.id === editingId);
+    if(editing && editing.reserveTimes && editing.reserveTimes.length){
+      setReserveTimes(editing.reserveTimes);
+    } else {
+      setReserveTimes(['14:00', '20:00']);
+    }
+  }
 }
 function ensureFallbackOption(show){
   const select = document.getElementById('effectType');
@@ -1268,6 +1381,7 @@ function openModal(mode, id){
       const hit = areaNodes.find(p=>row.area.indexOf(p.name.replace('省',''))>=0 || row.area.indexOf(p.name)>=0);
       if(hit){ hit.checked = true; hit.children.forEach(c=>{ c.checked=true; c.children.forEach(d=>d.checked=true); }); }
     }
+    setReserveTimes(row.mode === '过仓' ? (row.reserveTimes || []) : []);
   } else if(mode === '编辑'){
     scopeState.渠道 = '900030（小当置换-OPPO）';
     document.getElementById('effectType').value = '渠道';
@@ -1280,12 +1394,14 @@ function openModal(mode, id){
     document.getElementById('mSupplierText').textContent = '顺丰科技有限公司';
     document.getElementById('mSupplierText').classList.remove('ph');
     setShipMode('直发', '全部');
+    setReserveTimes([]);
   }
   renderScope();
   renderAreaTree();
   const editing = rows.find(r => r.id === editingId);
   document.getElementById('effectType').disabled = identityLocked;
   setFormLocked(!!(editing && editing.isFallback));
+  syncReserveTimesField();
   document.getElementById('modalMask').classList.add('show');
 }
 function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
@@ -1298,14 +1414,18 @@ function saveModal(){
       showToast('请选择发货方式');
       return;
     }
+    const reserveTimes = validateReserveTimes(ship.value);
+    if(reserveTimes === null) return;
     editing.mode = ship.value;
     editing.supplier = supplier;
     editing.recycler = '全部';
     editing.area = '全国';
+    editing.reserveTimes = ship.value === '过仓' ? reserveTimes : [];
     editing.name = '演示用户';
     editing.date = fmtNow();
     renderRows(filteredRows());
-    showToast('【演示】已修改兜底：' + ship.value + '，' + supplier);
+    const timesTip = ship.value === '过仓' ? '，预约时间：' + reserveTimes.join('、') : '';
+    showToast('【演示】已修改兜底：' + ship.value + '，' + supplier + timesTip);
     closeModal();
     return;
   }
@@ -1320,13 +1440,24 @@ function saveModal(){
     return;
   }
   const mode = ship.value;
+  const reserveTimes = validateReserveTimes(mode);
+  if(reserveTimes === null) return;
   const scope = scopeState[type];
   const scopeText = Array.isArray(scope) ? (scope.map(item=>item.name).join('、') || '未选择') : (scope || '未选择');
   if(!scope || (Array.isArray(scope) && !scope.length)){
     showToast('请选择生效范围');
     return;
   }
-  showToast('【演示】保存' + mode + '配置，生效类型：' + type + '，范围：' + scopeText + '，物流：' + supplier);
+  if(editing){
+    editing.mode = mode;
+    editing.supplier = supplier;
+    editing.reserveTimes = mode === '过仓' ? reserveTimes : [];
+    editing.name = '演示用户';
+    editing.date = fmtNow();
+    renderRows(filteredRows());
+  }
+  const timesTip = mode === '过仓' ? '，预约时间：' + reserveTimes.join('、') : '';
+  showToast('【演示】保存' + mode + '配置，生效类型：' + type + '，范围：' + scopeText + '，物流：' + supplier + timesTip);
   closeModal();
 }
 initModalDropdowns();
