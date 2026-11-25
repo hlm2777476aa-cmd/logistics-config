@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>线下回收物流配置 - 预付费竞价中心</title>
+<title>发货方式配置 - 预付费竞价中心</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -482,7 +482,7 @@
       <span class="bc-home"><svg viewBox="0 0 24 24"><path d="M12 3L2 11h3v9h6v-6h2v6h6v-9h3L12 3z"/></svg></span>
       <span>预付费竞价中心</span>
       <span class="sep">/</span>
-      <span class="cur">线下回收物流配置</span>
+      <span class="cur">发货方式配置</span>
     </div>
     <div class="header-right">
       <span class="icon-btn" title="全屏">
@@ -745,7 +745,7 @@ const menus = [
   {t:'议价配置', i:'tag'},
   {t:'第三方平台管理', i:'link', arrow:'right'},
   {t:'当换开放平台', i:'card', arrow:'down'},
-  {t:'线下回收物流配置', i:'hash', active:true},
+  {t:'发货方式配置', i:'hash', active:true},
   {t:'物流地址映射配置', i:'hash'},
   {t:'资金支付管理', i:'wallet', arrow:'down'},
   {t:'竞价异常机况配置', i:'alert'},
@@ -873,7 +873,7 @@ function doAction(name){ showToast('【演示】' + name); }
 function menuClick(name, el){
   document.querySelectorAll('.menu-item').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  if(name !== '线下回收物流配置') showToast('【演示】切换到：' + name);
+  if(name !== '发货方式配置') showToast('【演示】切换到：' + name);
 }
 function changePage(p){ showToast('【演示】翻页：' + p); }
 
