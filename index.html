@@ -1421,6 +1421,57 @@ function openModal(mode, id){
   document.getElementById('modalMask').classList.add('show');
 }
 function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
+function scopeObjectKeysForRow(r){
+  const type = r.effectType;
+  if(type === '合作方' || type === '渠道'){
+    const s = String(r.scope || '').trim();
+    if(!s) return [];
+    if(type === '渠道'){
+      const m = s.match(/^(\d+)/);
+      return [type + ':' + (m ? m[1] : s)];
+    }
+    return [type + ':' + s];
+  }
+  if(r.scopeItems && r.scopeItems.length){
+    return r.scopeItems.map(item => type + ':' + String(item.id));
+  }
+  return [];
+}
+function scopeObjectKeysFromForm(type, scope){
+  if(type === '合作方' || type === '渠道'){
+    const s = String(scope || '').trim();
+    if(!s) return [];
+    if(type === '渠道'){
+      const m = s.match(/^(\d+)/);
+      return [type + ':' + (m ? m[1] : s)];
+    }
+    return [type + ':' + s];
+  }
+  if(Array.isArray(scope)){
+    return scope.map(item => type + ':' + String(item.id));
+  }
+  return [];
+}
+function labelForScopeKey(type, objectPart, scope){
+  if(Array.isArray(scope)){
+    const item = scope.find(x => String(x.id) === objectPart);
+    if(item) return (item.name ? item.name + '（' + item.id + '）' : String(item.id));
+  }
+  return objectPart || String(scope || '');
+}
+function findScopeObjectConflict(keys, excludeId, type, scope){
+  for(const other of rows){
+    if(other.id === excludeId) continue;
+    const otherKeys = scopeObjectKeysForRow(other);
+    for(const k of keys){
+      if(otherKeys.includes(k)){
+        const objectPart = k.split(':').slice(1).join(':');
+        return { configId: other.id, label: labelForScopeKey(type, objectPart, scope) };
+      }
+    }
+  }
+  return null;
+}
 function saveModal(){
   const editing = rows.find(r => r.id === editingId);
   const type = effectType();
@@ -1434,6 +1485,12 @@ function saveModal(){
   const scopeText = Array.isArray(scope) ? (scope.map(item=>item.name).join('、') || '未选择') : (scope || '未选择');
   if(!scope || (Array.isArray(scope) && !scope.length)){
     showToast('请选择生效范围');
+    return;
+  }
+  const scopeKeys = scopeObjectKeysFromForm(type, scope);
+  const scopeConflict = findScopeObjectConflict(scopeKeys, editingId, type, scope);
+  if(scopeConflict){
+    showToast(scopeConflict.label + ' 已存在过仓配置（配置 ID：' + scopeConflict.configId + '），不可重复配置');
     return;
   }
   const recyclers = recyclerIdsString();
