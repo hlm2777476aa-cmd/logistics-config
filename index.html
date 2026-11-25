@@ -1377,6 +1377,55 @@ function validateReserveTimes(){
   }
   return times;
 }
+/** 与需求文档【保存】校验顺序一致；不通过时已 showToast，返回 null */
+function validateRecyclersForSave(){
+  if(!recyclerState.length) return '';
+  const knownIds = new Set(recyclerRows.map(r => String(r.id)));
+  const counts = new Map();
+  for(const item of recyclerState){
+    const id = String(item.id);
+    if(!knownIds.has(id)){
+      showToast('回收商 ' + id + ' 不存在，请核对后再填写');
+      return null;
+    }
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  const dupIds = [...counts.entries()].filter(([, c]) => c > 1).map(([id]) => id);
+  if(dupIds.length){
+    showToast('回收商 ' + dupIds.join('、') + ' 填写了多次，请只保留一个');
+    return null;
+  }
+  return recyclerState.map(item => item.id).join(',');
+}
+function validateScopeInForm(type, scope){
+  if(!scope || (Array.isArray(scope) && !scope.length)){
+    showToast('请选择生效范围');
+    return false;
+  }
+  if(Array.isArray(scope)){
+    const seen = new Set();
+    for(const item of scope){
+      const id = String(item.id);
+      if(seen.has(id)){
+        const label = item.name ? item.name + '（' + id + '）' : id;
+        showToast(label + ' 在生效范围中重复，请只保留一个');
+        return false;
+      }
+      seen.add(id);
+    }
+  }
+  return true;
+}
+function buildRowFromModal(type, scope, reserveTimes, recyclers){
+  if(Array.isArray(scope)){
+    return {
+      scopeKind: 'tags',
+      scopeItems: scope.map(item => ({ id: item.id, name: item.name })),
+      scope: scope.map(item => item.id + ' ' + item.name).join('、')
+    };
+  }
+  return { scopeKind: 'text', scopeItems: undefined, scope: scope };
+}
 function ensureReserveTimesDefault(){
   if(!document.querySelectorAll('#reserveTimesBox .reserve-time-row').length){
     const editing = rows.find(r => r.id === editingId);
@@ -1480,38 +1529,56 @@ function saveModal(){
     showToast('请选择生效类型');
     return;
   }
+  const scope = scopeState[type];
+  if(!validateScopeInForm(type, scope)) return;
+
   const reserveTimes = validateReserveTimes();
   if(reserveTimes === null) return;
-  const scope = scopeState[type];
-  const scopeText = Array.isArray(scope) ? (scope.map(item=>item.name).join('、') || '未选择') : (scope || '未选择');
-  if(!scope || (Array.isArray(scope) && !scope.length)){
-    showToast('请选择生效范围');
-    return;
-  }
+
+  const recyclers = validateRecyclersForSave();
+  if(recyclers === null) return;
+
   const scopeKeys = scopeObjectKeysFromForm(type, scope);
   const scopeConflict = findScopeObjectConflict(scopeKeys, editingId, type, scope);
   if(scopeConflict){
     showToast(scopeConflict.label + ' 已存在过仓配置（配置 ID：' + scopeConflict.configId + '），不可重复配置');
     return;
   }
-  const recyclers = recyclerIdsString();
+
+  const scopeText = Array.isArray(scope)
+    ? (scope.map(item => item.name).join('、') || '未选择')
+    : (scope || '未选择');
+  const scopeFields = buildRowFromModal(type, scope, reserveTimes, recyclers);
+  const recyclerLabel = recyclers || '全部';
+
   if(editing){
     editing.effectType = type;
-    if(Array.isArray(scope)){
-      editing.scopeKind = 'tags';
-      editing.scopeItems = scope.map(item => ({id: item.id, name: item.name}));
-      editing.scope = scope.map(item => item.id + ' ' + item.name).join('、') || editing.scope;
-    } else {
-      editing.scopeKind = 'text';
-      editing.scopeItems = undefined;
-      editing.scope = scope;
-    }
+    editing.scopeKind = scopeFields.scopeKind;
+    editing.scopeItems = scopeFields.scopeItems;
+    editing.scope = scopeFields.scope;
     editing.reserveTimes = reserveTimes;
-    editing.recycler = recyclers || '全部';
+    editing.recycler = recyclerLabel;
     editing.name = '演示用户';
     editing.date = fmtNow();
-    renderRows(filteredRows());
+  } else {
+    const newId = rows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
+    const now = fmtNow();
+    rows.push({
+      id: newId,
+      effectType: type,
+      scopeKind: scopeFields.scopeKind,
+      scopeItems: scopeFields.scopeItems,
+      scope: scopeFields.scope,
+      recycler: recyclerLabel,
+      reserveTimes: reserveTimes.slice(),
+      createdBy: '演示用户',
+      createdAt: now,
+      name: '演示用户',
+      date: now
+    });
   }
+  renderRows(filteredRows());
+
   const timesTip = '，预约时间：' + reserveTimes.join('、');
   const recTip = recyclers ? '，回收商：' + recyclers : '，全部回收商';
   showToast('【演示】保存过仓配置，生效类型：' + type + '，范围：' + scopeText + recTip + timesTip);
