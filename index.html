@@ -1076,7 +1076,7 @@ const storeRows = [
 const scopeState = { 合作方:'', 渠道:'', 代理商:[], 二级代理:[], 门店:[] };
 let currentModalMode = '新增';
 let editingId = null;
-let identityLocked = false;
+let effectTypeLocked = false;
 let pickerContext = 'scope';
 let pickerType = '';
 let recyclerState = [];
@@ -1098,17 +1098,13 @@ function renderScope(){
   if(type==='合作方' || type==='渠道'){
     const options = type==='合作方' ? partners : modalChannels;
     const cur = scopeState[type];
-    box.innerHTML = `<select class="scope-select" ${identityLocked?'disabled':''} onchange="scopeState['${type}']=this.value">
+    box.innerHTML = `<select class="scope-select" onchange="scopeState['${type}']=this.value">
       <option value="">请选择</option>
       ${options.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('')}
     </select>`;
     return;
   }
-  const tags = (scopeState[type] || []).map((item,i)=>`<span class="scope-tag">${item.name}${identityLocked?'':`<span class="x" onclick="removeScopeTag(${i})">×</span>`}</span>`).join('');
-  if(identityLocked){
-    box.innerHTML = `<div class="scope-tags is-locked">${tags}</div>`;
-    return;
-  }
+  const tags = (scopeState[type] || []).map((item,i)=>`<span class="scope-tag">${item.name}<span class="x" onclick="removeScopeTag(${i})">×</span></span>`).join('');
   const btn = type==='代理商' ? '添加代理商' : (type==='门店' ? '添加门店' : '添加二级');
   box.innerHTML = `<button type="button" class="add-scope" onclick="openPicker()">+ ${btn}</button><div class="scope-tags">${tags}</div>`;
 }
@@ -1194,7 +1190,6 @@ function loadRecyclersFromString(text){
   renderRecyclers();
 }
 function openPicker(){
-  if(identityLocked) return;
   pickerContext = 'scope';
   document.getElementById('pickerPanel').classList.remove('wide');
   pickerType = effectType();
@@ -1399,7 +1394,7 @@ function fmtNow(){
 function openModal(mode, id){
   currentModalMode = mode;
   editingId = mode === '编辑' ? id : null;
-  identityLocked = mode === '编辑';
+  effectTypeLocked = mode === '编辑';
   document.getElementById('modalTitle').textContent = mode;
   resetScope();
   const row = rows.find(r=>r.id===id);
@@ -1421,7 +1416,7 @@ function openModal(mode, id){
     renderRecyclers();
   }
   renderScope();
-  document.getElementById('effectType').disabled = identityLocked;
+  document.getElementById('effectType').disabled = effectTypeLocked;
   ensureReserveTimesDefault();
   document.getElementById('modalMask').classList.add('show');
 }
