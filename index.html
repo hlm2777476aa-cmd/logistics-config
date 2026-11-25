@@ -110,7 +110,15 @@
   }
   /* 提示区 */
   .tips { margin: 2px 2px 18px; color: #808695; font-size: 12px; line-height: 20px; }
-  .tips .t-title { color: #808695; }
+  .tips .t-title { color: #515a6e; font-weight: 600; margin-bottom: 6px; }
+  .tip-list { margin: 0; padding-left: 18px; }
+  .tip-list li { margin: 5px 0; }
+  .tip-list li::marker { color: #c5c8ce; }
+  .modal-tips {
+    background: #f8f8f9; border-radius: 4px; padding: 10px 12px 10px 10px;
+    margin-bottom: 14px; color: #808695; font-size: 12px; line-height: 20px;
+  }
+  .modal-tips .t-title { color: #515a6e; font-weight: 600; margin-bottom: 6px; }
   /* 筛选栏 */
   .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
   .select-wrap { position: relative; }
@@ -331,7 +339,6 @@
   .modal-close { cursor: pointer; color: #808695; font-size: 20px; line-height: 1; }
   .modal-close:hover { color: #515a6e; }
   .modal-body { padding: 16px 18px 8px; overflow-y: auto; }
-  .modal-tips { color: #808695; font-size: 12px; line-height: 19px; margin: 0 0 16px 2px; }
   .form-item { display: flex; align-items: flex-start; margin-bottom: 16px; }
   .form-item > label {
     width: 100px; flex: 0 0 100px; text-align: right; padding-right: 12px;
@@ -495,11 +502,14 @@
   <div class="content">
     <!-- 提示区 -->
     <div class="tips">
-      <div class="t-title">提示：</div>
-      <div>1、本页配置发货方式（直发 / 过仓）。过仓可指定回收商，也可留空表示该寄货方下全部回收商</div>
-      <div>2、寄货方命中：门店 &gt; 二级代理 &gt; 代理商 &gt; 渠道 &gt; 合作方。同一寄货方下，<strong>指定了回收商</strong>的配置优先于<strong>未指定（全部回收商）</strong>的配置</div>
-      <div>3、示例：渠道 A 对回收商 100、101 过仓，对全部回收商直发——可新增两行，过仓行填回收商 id，直发行留空</div>
-      <div>4、过仓须配置自动预约物流时间；修改后立即生效，只影响之后的预约。已有物流单不改</div>
+      <div class="t-title">提示</div>
+      <ul class="tip-list">
+        <li>本页只配置发货方式（直发 / 过仓）及过仓预约时刻，不配置物流公司、发货区域。</li>
+        <li>寄货方命中：订单先在「门店 → 二级代理 → 代理商 → 渠道 → 合作方」中取最细一条配置。</li>
+        <li>回收商命中（过仓）：同一寄货方下，先匹配「指定了回收商」的行；未匹配到时，再用「全部回收商」的过仓/直发行。直发行不区分回收商。</li>
+        <li>示例：渠道 900030 可对回收商 1001、1002 建一条过仓（弹窗勾选），再建一条直发且不选回收商，覆盖其他回收商。</li>
+        <li>过仓须配置自动预约物流时间。修改/删除后立即生效，只影响之后的预约；已有物流单不改。列表末行「兜底」可编辑、不可删。</li>
+      </ul>
     </div>
 
     <!-- 筛选栏 -->
@@ -587,11 +597,14 @@
     </div>
     <div class="modal-body">
       <div class="modal-tips">
-        <div>提示：</div>
-        <div>1、生效类型选择寄货方，命中优先级为门店&gt;二级代理&gt;代理商&gt;渠道&gt;合作方</div>
-        <div>2、发货方式为<strong>过仓</strong>时，可填指定回收商（多个 id 英文逗号隔开）；留空=全部回收商。直发不填该字段</div>
-        <div>3、同一寄货方可有多条配置：指定回收商的命中优先于未指定的</div>
-        <div>4、过仓须配置自动预约物流时间；修改/删除后立即生效</div>
+        <div class="t-title">提示</div>
+        <ul class="tip-list">
+          <li>生效类型 + 生效范围：锁定订单的寄货方。同一寄货方可维护多条配置（不同发货方式或不同回收商）。</li>
+          <li>发货方式选「直发」：门店直发流程；选「过仓」：展示「指定回收商」「自动预约物流时间」。</li>
+          <li>指定回收商（过仓选填）：点击添加，在弹窗内搜索并多选；不选即该寄货方下全部回收商过仓。</li>
+          <li>自动预约物流时间（过仓必填）：支持多个整点/时刻，不可重复，保存后过仓订单按此时刻预约物流。</li>
+          <li>保存后立即生效，仅影响之后订单。编辑时生效类型与范围不可改；兜底行仅可改发货方式与过仓相关项。</li>
+        </ul>
       </div>
 
       <div class="form-item">
@@ -627,8 +640,7 @@
         <div class="fc">
           <button type="button" class="add-scope" onclick="openRecyclerPicker()">+ 添加回收商</button>
           <div id="recyclerTags" class="scope-tags"></div>
-          <div class="recycler-empty" id="recyclerEmptyHint">未选择表示该寄货方下全部回收商；选择后仅对这些回收商过仓，且优先于未指定的配置</div>
-          <div class="field-hint">弹窗内可搜索、多选回收商</div>
+          <div class="recycler-empty" id="recyclerEmptyHint">未添加任何回收商时，本条过仓对该寄货方下全部回收商生效</div>
         </div>
       </div>
 
@@ -644,7 +656,7 @@
       <div class="form-item" id="fallbackNoteItem" style="display:none">
         <label></label>
         <div class="fc">
-          <div id="fallbackNote" style="color:#808695;font-size:12px;line-height:20px">兜底可修改发货方式与自动预约物流时间</div>
+          <div id="fallbackNote" style="color:#808695;font-size:12px;line-height:20px">兜底：未命中任何寄货方配置时使用，仅可改发货方式与过仓预约时间</div>
         </div>
       </div>
     </div>
@@ -1279,8 +1291,8 @@ function syncRecyclerField(mode){
   item.style.display = mode === '过仓' ? 'flex' : 'none';
   if(mode !== '过仓') {
     recyclerState = [];
-    renderRecyclers();
   }
+  renderRecyclers();
 }
 function reserveTimesText(row){
   if(row.mode !== '过仓' || !row.reserveTimes || !row.reserveTimes.length) return '-';
