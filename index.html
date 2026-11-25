@@ -514,10 +514,6 @@
   .picker-foot { border-top: 1px solid #f0f0f0; padding: 12px 16px; text-align: right; }
   .picker-foot .btn { margin-left: 8px; min-width: 72px; justify-content: center; }
   .picker.wide { width: 1120px; }
-  .rec-avatar {
-    width: 28px; height: 28px; border-radius: 50%; background: #ff9d2e;
-    display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
-  }
   .picker td.addr { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .recycler-empty { color: #808695; font-size: 12px; line-height: 20px; margin-top: 6px; }
 </style>
@@ -1132,7 +1128,7 @@ function resetScope(){
 function pickerColumns(){
   if(pickerContext === 'recycler') {
     return [
-      ['id','回收商id'],['avatar','头像'],['name','姓名'],['mobile','手机号'],
+      ['id','回收商id'],['name','姓名'],['mobile','手机号'],
       ['idCard','身份证号'],['address','收货地址'],['bidUserId','竞拍用户id'],['status','状态']
     ];
   }
@@ -1147,7 +1143,6 @@ function pickerSource(){
   return secondRows;
 }
 function pickerCell(row, key){
-  if(key === 'avatar') return '<span class="rec-avatar">🐾</span>';
   if(key === 'address') return `<span class="addr" title="${row.address || ''}">${row.address || ''}</span>`;
   return row[key] ?? '';
 }
