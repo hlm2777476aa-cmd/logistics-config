@@ -1438,6 +1438,16 @@ function saveModal(){
   }
   const recyclers = recyclerIdsString();
   if(editing){
+    editing.effectType = type;
+    if(Array.isArray(scope)){
+      editing.scopeKind = 'tags';
+      editing.scopeItems = scope.map(item => ({id: item.id, name: item.name}));
+      editing.scope = scope.map(item => item.id + ' ' + item.name).join('、') || editing.scope;
+    } else {
+      editing.scopeKind = 'text';
+      editing.scopeItems = undefined;
+      editing.scope = scope;
+    }
     editing.reserveTimes = reserveTimes;
     editing.recycler = recyclers || '全部';
     editing.name = '演示用户';
