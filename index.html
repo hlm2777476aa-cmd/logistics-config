@@ -182,8 +182,7 @@
   col.c-type { width: 88px; }
   col.c-scope { width: auto; }
   col.c-mode { width: 72px; }
-  col.c-supplier { width: 140px; }
-  col.c-condition { width: 148px; }
+  col.c-recycler { width: 120px; }
   col.c-reserve { width: 96px; }
   col.c-time { width: 120px; }
   col.c-op { width: 118px; }
@@ -490,10 +489,10 @@
     <!-- 提示区 -->
     <div class="tips">
       <div class="t-title">提示：</div>
-      <div>1、本页仅配置发货方式（直发 / 过仓），不再配置物流供应商与配置条件（回收商 / 区域）</div>
-      <div>2、生效类型是寄货方维度。订单命中优先级为：门店、二级代理、代理商、渠道、合作方，命中后取对应发货方式</div>
-      <div>3、发货方式为过仓时，可配置多个自动预约物流时间；过仓收货仓库不在本页配置</div>
-      <div>4、修改后立即生效，只影响之后的预约。已有物流单不改</div>
+      <div>1、本页配置发货方式（直发 / 过仓）。过仓可指定回收商，也可留空表示该寄货方下全部回收商</div>
+      <div>2、寄货方命中：门店 &gt; 二级代理 &gt; 代理商 &gt; 渠道 &gt; 合作方。同一寄货方下，<strong>指定了回收商</strong>的配置优先于<strong>未指定（全部回收商）</strong>的配置</div>
+      <div>3、示例：渠道 A 对回收商 100、101 过仓，对全部回收商直发——可新增两行，过仓行填回收商 id，直发行留空</div>
+      <div>4、过仓须配置自动预约物流时间；修改后立即生效，只影响之后的预约。已有物流单不改</div>
     </div>
 
     <!-- 筛选栏 -->
@@ -533,7 +532,7 @@
       <table>
         <colgroup>
           <col class="c-id"><col class="c-type"><col class="c-scope"><col class="c-mode">
-          <col class="c-reserve"><col class="c-time"><col class="c-time"><col class="c-op">
+          <col class="c-recycler"><col class="c-reserve"><col class="c-time"><col class="c-time"><col class="c-op">
         </colgroup>
         <thead>
           <tr>
@@ -541,6 +540,7 @@
             <th>生效类型</th>
             <th>生效范围（寄货方）</th>
             <th>发货方式</th>
+            <th>指定回收商</th>
             <th>自动预约物流时间</th>
             <th>创建时间</th>
             <th>最后修改时间</th>
@@ -550,7 +550,7 @@
         <tbody id="tbody"></tbody>
       </table>
       <div class="pagination">
-        <span class="pg-total" id="pgTotal">共 9 条</span>
+        <span class="pg-total" id="pgTotal">共 10 条</span>
         <span class="pg-btn" onclick="changePage('prev')">&lt;</span>
         <span class="pg-btn active" onclick="changePage(1)">1</span>
         <span class="pg-btn" onclick="changePage('next')">&gt;</span>
@@ -582,9 +582,9 @@
       <div class="modal-tips">
         <div>提示：</div>
         <div>1、生效类型选择寄货方，命中优先级为门店&gt;二级代理&gt;代理商&gt;渠道&gt;合作方</div>
-        <div>2、本页仅配置发货方式，物流供应商与区域 / 回收商条件已下线</div>
-        <div>3、发货方式为过仓时，可配置多个自动预约物流时间</div>
-        <div>4、修改/删除配置后立即生效</div>
+        <div>2、发货方式为<strong>过仓</strong>时，可填指定回收商（多个 id 英文逗号隔开）；留空=全部回收商。直发不填该字段</div>
+        <div>3、同一寄货方可有多条配置：指定回收商的命中优先于未指定的</div>
+        <div>4、过仓须配置自动预约物流时间；修改/删除后立即生效</div>
       </div>
 
       <div class="form-item">
@@ -612,6 +612,14 @@
             <label><input type="radio" name="shipMode" value="直发" checked onchange="setShipMode('直发')">直发</label>
             <label><input type="radio" name="shipMode" value="过仓" onchange="setShipMode('过仓')">过仓</label>
           </div>
+        </div>
+      </div>
+
+      <div class="form-item" id="recyclerItem" style="display:none">
+        <label>指定回收商</label>
+        <div class="fc">
+          <textarea class="mtextarea" id="mRecycler" placeholder="选填。多个父回收商 id 用英文逗号隔开；留空表示该寄货方下全部回收商"></textarea>
+          <div class="field-hint">仅过仓生效。填写后只对这些回收商按本条过仓配置发货，且优先于未指定回收商的配置</div>
         </div>
       </div>
 
@@ -735,8 +743,9 @@ sidebar.innerHTML = menus.map(m => `
 /* ---------- 表格数据 ---------- */
 const rows = [
   {id:0, effectType:'兜底', scope:'-', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'系统', date:'2025-04-17 16:46:55', createdBy:'系统', createdAt:'2025-04-01 10:00:00', mode:'直发', reserveTimes:[], isFallback:true},
-  {id:11, effectType:'门店', scope:'483941 OPPO官方授权体验店', scopeKind:'tags', scopeItems:[{id:'483941', name:'OPPO官方授权体验店'}], supplier:'京东快递', area:'广东省', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:40:12', createdBy:'孙亭辉', createdAt:'2026-11-18 09:12:06', mode:'过仓', reserveTimes:['14:00','20:00'], hl:true},
-  {id:10, effectType:'二级代理', scope:'6612 OPPO邹邹佣金二级', scopeKind:'tags', scopeItems:[{id:'6612', name:'OPPO邹邹佣金二级'}], supplier:'顺丰科技有限公司', area:'全国', recycler:'/', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', mode:'过仓', reserveTimes:['14:00','20:00']},
+  {id:12, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', recycler:'1001,1002', name:'孙亭辉', date:'2026-11-25 10:20:00', createdBy:'孙亭辉', createdAt:'2026-11-25 10:18:00', mode:'过仓', reserveTimes:['14:00','20:00']},
+  {id:11, effectType:'门店', scope:'483941 OPPO官方授权体验店', scopeKind:'tags', scopeItems:[{id:'483941', name:'OPPO官方授权体验店'}], recycler:'8520', name:'孙亭辉', date:'2026-11-20 18:40:12', createdBy:'孙亭辉', createdAt:'2026-11-18 09:12:06', mode:'过仓', reserveTimes:['14:00','20:00'], hl:true},
+  {id:10, effectType:'二级代理', scope:'6612 OPPO邹邹佣金二级', scopeKind:'tags', scopeItems:[{id:'6612', name:'OPPO邹邹佣金二级'}], recycler:'全部', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', mode:'过仓', reserveTimes:['14:00','20:00']},
   {id:9, effectType:'代理商', scope:'862 OPPO邹邹佣金测试代理002', scopeKind:'tags', scopeItems:[{id:'862', name:'OPPO邹邹佣金测试代理002'}], supplier:'京东快递', area:'全国', recycler:'369', name:'孙亭辉', date:'2026-11-20 18:28:04', createdBy:'孙亭辉', createdAt:'2026-11-17 15:22:18', mode:'直发'},
   {id:8, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', supplier:'京东快递', area:'广东省', recycler:'全部', name:'孙亭辉', date:'2026-11-20 17:12:33', createdBy:'孙亭辉', createdAt:'2026-11-16 11:03:52', mode:'直发'},
   {id:1, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', supplier:'顺丰科技有限公司', area:'全国', recycler:'全部', name:'YH215762', date:'2025-06-12 14:28:23', createdBy:'YH215762', createdAt:'2025-06-12 11:05:08', mode:'直发'},
@@ -761,6 +770,7 @@ function renderRows(list, total){
     <td>${r.effectType}</td>
     <td><div class="channel-line">${r.scope}</div>${r.isFallback?'<span class="tag-default">兜底</span>':''}</td>
     <td>${r.mode==='过仓'?'<span class="tag-mode">过仓</span>':'直发'}</td>
+    <td>${recyclerCellText(r)}</td>
     <td>${reserveTimesText(r)}</td>
     <td><div class="time-name">${r.createdBy}</div><div class="time-date">${r.createdAt}</div></td>
     <td><div class="time-name">${r.name}</div><div class="time-date">${r.date}</div></td>
@@ -1152,6 +1162,22 @@ function setShipMode(mode){
     setReserveTimes(['14:00', '20:00']);
   }
   syncReserveTimesField(mode);
+  syncRecyclerField(mode);
+}
+function normalizeRecyclerInput(text){
+  return (text || '').split(',').map(s => s.trim()).filter(Boolean).join(',');
+}
+function recyclerCellText(row){
+  if(row.mode !== '过仓') return '-';
+  const r = row.recycler;
+  if(!r || r === '全部' || r === '/') return '全部回收商';
+  return r;
+}
+function syncRecyclerField(mode){
+  mode = mode || currentShipMode();
+  const item = document.getElementById('recyclerItem');
+  item.style.display = mode === '过仓' ? 'flex' : 'none';
+  if(mode !== '过仓') document.getElementById('mRecycler').value = '';
 }
 function reserveTimesText(row){
   if(row.mode !== '过仓' || !row.reserveTimes || !row.reserveTimes.length) return '-';
@@ -1275,13 +1301,17 @@ function openModal(mode, id){
     else scopeState[row.effectType] = row.scope;
     setShipMode(row.mode);
     setReserveTimes(row.mode === '过仓' ? (row.reserveTimes || []) : []);
+    const rv = row.recycler;
+    document.getElementById('mRecycler').value = (row.mode === '过仓' && rv && rv !== '全部' && rv !== '/') ? rv : '';
   } else if(mode === '编辑'){
     scopeState.渠道 = '900030（小当置换-OPPO）';
     document.getElementById('effectType').value = '渠道';
     setShipMode('直发');
+    document.getElementById('mRecycler').value = '';
   } else {
     setShipMode('直发');
     setReserveTimes([]);
+    document.getElementById('mRecycler').value = '';
   }
   renderScope();
   const editing = rows.find(r => r.id === editingId);
@@ -1303,6 +1333,7 @@ function saveModal(){
     if(reserveTimes === null) return;
     editing.mode = ship.value;
     editing.reserveTimes = ship.value === '过仓' ? reserveTimes : [];
+    editing.recycler = ship.value === '过仓' ? (normalizeRecyclerInput(document.getElementById('mRecycler').value) || '全部') : '全部';
     editing.name = '演示用户';
     editing.date = fmtNow();
     renderRows(filteredRows());
@@ -1330,15 +1361,18 @@ function saveModal(){
     showToast('请选择生效范围');
     return;
   }
+  const recyclers = mode === '过仓' ? normalizeRecyclerInput(document.getElementById('mRecycler').value) : '';
   if(editing){
     editing.mode = mode;
     editing.reserveTimes = mode === '过仓' ? reserveTimes : [];
+    editing.recycler = mode === '过仓' ? (recyclers || '全部') : '全部';
     editing.name = '演示用户';
     editing.date = fmtNow();
     renderRows(filteredRows());
   }
   const timesTip = mode === '过仓' ? '，预约时间：' + reserveTimes.join('、') : '';
-  showToast('【演示】保存' + mode + '配置，生效类型：' + type + '，范围：' + scopeText + timesTip);
+  const recTip = mode === '过仓' ? (recyclers ? '，回收商：' + recyclers : '，全部回收商') : '';
+  showToast('【演示】保存' + mode + '配置，生效类型：' + type + '，范围：' + scopeText + recTip + timesTip);
   closeModal();
 }
 document.addEventListener('click', ()=> document.querySelectorAll('.msel-drop').forEach(d=>d.classList.remove('open')));
