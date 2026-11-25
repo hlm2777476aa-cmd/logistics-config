@@ -230,6 +230,49 @@
   tbody tr:hover { background: #f5faff; }
   tbody tr.highlight { background: #eaf4ff; }
   .channel-line { line-height: 18px; color: #515a6e; font-size: 12px; }
+  .scope-cell {
+    position: relative;
+    text-align: left;
+    padding: 2px 4px;
+  }
+  .scope-cell-inner {
+    font-size: 12px;
+    line-height: 18px;
+    color: #515a6e;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    overflow: hidden;
+    word-break: break-all;
+    text-align: left;
+  }
+  .scope-cell.scope-overflow .scope-cell-inner {
+    cursor: default;
+  }
+  .scope-tooltip {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    z-index: 200;
+    min-width: 220px;
+    max-width: min(420px, 70vw);
+    max-height: 280px;
+    overflow: auto;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #e8eaec;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 18px;
+    color: #515a6e;
+    text-align: left;
+    white-space: normal;
+  }
+  .scope-cell.scope-overflow:hover .scope-tooltip {
+    display: block;
+  }
   .tag-default {
     display: inline-block;
     margin-top: 2px;
@@ -737,7 +780,11 @@ sidebar.innerHTML = menus.map(m => `
 const rows = [
   {id:12, effectType:'渠道', scope:'900030（小当置换-OPPO）', scopeKind:'text', recycler:'1001,1002', name:'孙亭辉', date:'2026-11-25 10:20:00', createdBy:'孙亭辉', createdAt:'2026-11-25 10:18:00', reserveTimes:['14:00','20:00']},
   {id:11, effectType:'门店', scope:'483941 OPPO官方授权体验店', scopeKind:'tags', scopeItems:[{id:'483941', name:'OPPO官方授权体验店'}], recycler:'8520', name:'孙亭辉', date:'2026-11-20 18:40:12', createdBy:'孙亭辉', createdAt:'2026-11-18 09:12:06', reserveTimes:['14:00','20:00'], hl:true},
-  {id:10, effectType:'二级代理', scope:'6612 OPPO邹邹佣金二级', scopeKind:'tags', scopeItems:[{id:'6612', name:'OPPO邹邹佣金二级'}], recycler:'全部', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', reserveTimes:['14:00','20:00']},
+  {id:10, effectType:'代理商', scope:'多条代理商示例', scopeKind:'tags', scopeItems:[
+    {id:'862', name:'OPPO邹邹佣金测试代理002'},{id:'863', name:'深圳南山测试代理'},{id:'864', name:'广州天河测试代理'},
+    {id:'865', name:'东莞虎门测试代理'},{id:'866', name:'佛山顺德测试代理'},{id:'867', name:'惠州惠城测试代理'},
+    {id:'868', name:'中山小榄测试代理'},{id:'869', name:'珠海香洲测试代理'}
+  ], recycler:'全部', name:'孙亭辉', date:'2026-11-20 18:36:20', createdBy:'孙亭辉', createdAt:'2026-11-18 09:08:41', reserveTimes:['14:00','20:00']},
   {id:9, effectType:'渠道', scope:'900032（小当置换-一加）', scopeKind:'text', recycler:'全部', name:'YH000093', date:'2025-07-08 10:55:31', createdBy:'YH000093', createdAt:'2025-07-08 09:16:44', reserveTimes:['14:00','20:00']},
 ];
 const tbody = document.getElementById('tbody');
@@ -747,6 +794,35 @@ function ordered(list){
     return a.createdAt < b.createdAt ? 1 : -1;
   });
 }
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatScopeLines(r){
+  if(r.scopeItems && r.scopeItems.length){
+    return r.scopeItems.map(item => {
+      const id = item.id ? String(item.id) : '';
+      const name = item.name || '';
+      return id && name ? `${id} ${name}` : (name || id);
+    }).join('\n');
+  }
+  return String(r.scope || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean).join('\n') || String(r.scope || '');
+}
+function scopeCellHtml(r){
+  const plain = formatScopeLines(r);
+  const body = escapeHtml(plain).replace(/\n/g, '<br>');
+  return `<div class="scope-cell"><div class="scope-cell-inner">${body}</div><div class="scope-tooltip">${body}</div></div>`;
+}
+function markScopeOverflow(){
+  document.querySelectorAll('.scope-cell').forEach(cell => {
+    const inner = cell.querySelector('.scope-cell-inner');
+    if(!inner) return;
+    if(inner.scrollHeight > inner.clientHeight + 1){
+      cell.classList.add('scope-overflow');
+    } else {
+      cell.classList.remove('scope-overflow');
+    }
+  });
+}
 function renderRows(list, total){
   const view = ordered(list);
   document.getElementById('pgTotal').textContent = '共 ' + (total == null ? rows.length : view.length) + ' 条';
@@ -754,13 +830,14 @@ function renderRows(list, total){
   <tr class="${r.hl?'highlight':''}" ondblclick="doAction('双击行：配置 ${r.id}')">
     <td>${r.id}</td>
     <td>${r.effectType}</td>
-    <td><div class="channel-line">${r.scope}</div></td>
+    <td>${scopeCellHtml(r)}</td>
     <td>${recyclerCellText(r)}</td>
     <td>${reserveTimesText(r)}</td>
     <td><div class="time-name">${r.createdBy}</div><div class="time-date">${r.createdAt}</div></td>
     <td><div class="time-name">${r.name}</div><div class="time-date">${r.date}</div></td>
     <td><button class="btn-edit" onclick="event.stopPropagation();openModal('编辑',${r.id})">编辑</button><button class="btn-del" onclick="event.stopPropagation();openDelete(${r.id})">删除</button></td>
   </tr>`).join('');
+  markScopeOverflow();
 }
 let deletingId = null;
 function openDelete(id){
