@@ -451,6 +451,13 @@
   .picker-page .chosen { margin-right: auto; }
   .picker-foot { border-top: 1px solid #f0f0f0; padding: 12px 16px; text-align: right; }
   .picker-foot .btn { margin-left: 8px; min-width: 72px; justify-content: center; }
+  .picker.wide { width: 1120px; }
+  .rec-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: #ff9d2e;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .picker td.addr { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recycler-empty { color: #808695; font-size: 12px; line-height: 20px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -618,8 +625,10 @@
       <div class="form-item" id="recyclerItem" style="display:none">
         <label>指定回收商</label>
         <div class="fc">
-          <textarea class="mtextarea" id="mRecycler" placeholder="选填。多个父回收商 id 用英文逗号隔开；留空表示该寄货方下全部回收商"></textarea>
-          <div class="field-hint">仅过仓生效。填写后只对这些回收商按本条过仓配置发货，且优先于未指定回收商的配置</div>
+          <button type="button" class="add-scope" onclick="openRecyclerPicker()">+ 添加回收商</button>
+          <div id="recyclerTags" class="scope-tags"></div>
+          <div class="recycler-empty" id="recyclerEmptyHint">未选择表示该寄货方下全部回收商；选择后仅对这些回收商过仓，且优先于未指定的配置</div>
+          <div class="field-hint">弹窗内可搜索、多选回收商</div>
         </div>
       </div>
 
@@ -661,7 +670,7 @@
 </div>
 
 <div class="picker-mask" id="pickerMask">
-  <div class="picker">
+  <div class="picker" id="pickerPanel">
     <div class="picker-head">
       <span id="pickerTitle">添加代理商</span>
       <span class="modal-close" onclick="closePicker()">×</span>
@@ -954,6 +963,22 @@ function parentState(node){
 
 const partners = ['OPPO','vivo','小天才','一加','realme','小当回收'];
 const modalChannels = ['900030（小当置换-OPPO）','900032（小当置换-一加）','900033（小当置换-vivo）','900034（小当置换-小天才）','900035（小当置换-Realme）','900037（OPPO-NKA）','900038（易换新-移动合作方）','900040（易换新-当收）'];
+const recyclerRows = [
+  {id:'115305', name:'回收商测试001', mobile:'15900000001', idCard:'110101199001011234', address:'北京市东城区测试路1号', bidUserId:'106188', status:'启用'},
+  {id:'116739', name:'回收商zq001', mobile:'15900000002', idCard:'420106199205053210', address:'湖北省武汉市洪山区光谷大道88号', bidUserId:'106189', status:'启用'},
+  {id:'116088', name:'回收商555419', mobile:'17665351234', idCard:'440305198803120011', address:'广东省深圳市南山区深南大道9966号', bidUserId:'106190', status:'启用'},
+  {id:'116051', name:'回收商zq002', mobile:'13800138001', idCard:'330102199303033344', address:'浙江省杭州市西湖区文三路478号', bidUserId:'106191', status:'启用'},
+  {id:'115882', name:'收收收收收收', mobile:'13800138002', idCard:'510104199404044455', address:'四川省成都市武侯区天府大道中段666号', bidUserId:'106192', status:'启用'},
+  {id:'115878', name:'展展展展展展', mobile:'13800138003', idCard:'320106199505055566', address:'江苏省南京市鼓楼区中山北路100号', bidUserId:'106193', status:'启用'},
+  {id:'115863', name:'林鸿的收收收商店', mobile:'13800138004', idCard:'350102199606066677', address:'福建省福州市鼓楼区五一北路200号', bidUserId:'106194', status:'启用'},
+  {id:'115844', name:'展收商店', mobile:'13800138005', idCard:'370102199707077788', address:'山东省济南市历下区经十路1500号', bidUserId:'106195', status:'启用'},
+  {id:'115795', name:'现货款', mobile:'13800138006', idCard:'410102199808088899', address:'河南省郑州市金水区花园路100号', bidUserId:'106196', status:'启用'},
+  {id:'115697', name:'回收商zeze1', mobile:'13800138007', idCard:'430102199909099900', address:'湖南省长沙市岳麓区麓谷大道668号', bidUserId:'106197', status:'启用'},
+  {id:'115687', name:'回收商渠道', mobile:'13800138008', idCard:'500106199010101010', address:'重庆市渝北区黄山大道中段60号', bidUserId:'106198', status:'启用'},
+  {id:'115670', name:'回收测试4', mobile:'13800138009', idCard:'610102199111111111', address:'陕西省西安市雁塔区科技路38号', bidUserId:'106199', status:'禁用'},
+  {id:'1001', name:'演示回收商A', mobile:'13900001001', idCard:'440106199212121212', address:'广东省广州市天河区体育西路123号', bidUserId:'106200', status:'启用'},
+  {id:'1002', name:'演示回收商B', mobile:'13900001002', idCard:'440106199313131313', address:'广东省广州市越秀区中山五路68号', bidUserId:'106201', status:'启用'}
+];
 const agentRows = [
   {id:'862', name:'OPPO邹邹佣金测试代理002', status:'合作中'},
   {id:'861', name:'邹邹佣金测试代理002', status:'合作中'},
@@ -998,7 +1023,9 @@ const scopeState = { 合作方:'', 渠道:'', 代理商:[], 二级代理:[], 门
 let currentModalMode = '新增';
 let editingId = null;
 let identityLocked = false;
+let pickerContext = 'scope';
 let pickerType = '';
+let recyclerState = [];
 let pickerChecked = new Set();
 let pickerFiltered = [];
 let pickerPageNo = 1;
@@ -1049,17 +1076,78 @@ function resetScope(){
   renderScope();
 }
 function pickerColumns(){
+  if(pickerContext === 'recycler') {
+    return [
+      ['id','回收商id'],['avatar','头像'],['name','姓名'],['mobile','手机号'],
+      ['idCard','身份证号'],['address','收货地址'],['bidUserId','竞拍用户id'],['status','状态']
+    ];
+  }
   if(pickerType==='代理商') return [['id','代理商ID'],['name','代理商名称'],['status','状态']];
   if(pickerType==='门店') return [['id','门店ID'],['name','门店名称'],['secondId','二级ID'],['secondName','二级名称'],['status','状态']];
   return [['id','二级ID'],['name','二级名称'],['stores','下属门店数'],['agentId','代理商ID'],['agentName','代理商名称'],['status','状态']];
 }
 function pickerSource(){
+  if(pickerContext === 'recycler') return recyclerRows;
   if(pickerType==='代理商') return agentRows;
   if(pickerType==='门店') return storeRows;
   return secondRows;
 }
+function pickerCell(row, key){
+  if(key === 'avatar') return '<span class="rec-avatar">🐾</span>';
+  if(key === 'address') return `<span class="addr" title="${row.address || ''}">${row.address || ''}</span>`;
+  return row[key] ?? '';
+}
+function openRecyclerPicker(){
+  pickerContext = 'recycler';
+  pickerType = '回收商';
+  pickerChecked = new Set(recyclerState.map(item => item.id));
+  pickerPageNo = 1;
+  document.getElementById('pickerTitle').textContent = '添加回收商';
+  document.getElementById('pickerPanel').classList.add('wide');
+  document.getElementById('pickerFilters').innerHTML = `
+    <label>回收商id</label><input id="pf-id" placeholder="请输入回收商id">
+    <label>姓名</label><input id="pf-name" placeholder="请输入姓名">
+    <label>手机号</label><input id="pf-mobile" placeholder="请输入手机号">
+    <label>竞拍用户id</label><input id="pf-bidUserId" placeholder="请输入竞拍用户id">
+    <label>账号状态</label>
+    <select id="pf-status"><option value="">请选择账号状态</option><option>启用</option><option>禁用</option></select>
+    <button class="btn btn-primary" onclick="runPickerQuery()">查询</button>
+    <button class="btn btn-default" onclick="resetPickerQuery()">重置</button>`;
+  runPickerQuery();
+  document.getElementById('pickerMask').classList.add('show');
+}
+function renderRecyclers(){
+  const box = document.getElementById('recyclerTags');
+  if(!box) return;
+  box.innerHTML = recyclerState.map((item, i) =>
+    `<span class="scope-tag">${item.name}（${item.id}）<span class="x" onclick="removeRecyclerTag(${i})">×</span></span>`
+  ).join('');
+  const hint = document.getElementById('recyclerEmptyHint');
+  if(hint) hint.style.display = recyclerState.length ? 'none' : 'block';
+}
+function removeRecyclerTag(i){
+  recyclerState.splice(i, 1);
+  renderRecyclers();
+}
+function recyclerIdsString(){
+  return recyclerState.map(item => item.id).join(',');
+}
+function loadRecyclersFromString(text){
+  if(!text || text === '全部' || text === '/') {
+    recyclerState = [];
+    renderRecyclers();
+    return;
+  }
+  recyclerState = text.split(/[,，]/).map(s => s.trim()).filter(Boolean).map(id => {
+    const row = recyclerRows.find(r => r.id === id);
+    return {id, name: row ? row.name : id};
+  });
+  renderRecyclers();
+}
 function openPicker(){
   if(identityLocked) return;
+  pickerContext = 'scope';
+  document.getElementById('pickerPanel').classList.remove('wide');
   pickerType = effectType();
   pickerChecked = new Set(scopeState[pickerType].map(item=>item.id));
   pickerPageNo = 1;
@@ -1092,6 +1180,15 @@ function runPickerQuery(){
     if(status && row.status !== status) return false;
     const idInput = document.getElementById('pf-id');
     if(idInput && !matchIds(idInput.value, row.id)) return false;
+  if(pickerContext === 'recycler'){
+    const nameInput = document.getElementById('pf-name');
+    if(nameInput && nameInput.value.trim() && row.name.indexOf(nameInput.value.trim()) < 0) return false;
+    const mobileInput = document.getElementById('pf-mobile');
+    if(mobileInput && mobileInput.value.trim() && String(row.mobile).indexOf(mobileInput.value.trim()) < 0) return false;
+    const bidInput = document.getElementById('pf-bidUserId');
+    if(bidInput && bidInput.value.trim() && String(row.bidUserId).indexOf(bidInput.value.trim()) < 0) return false;
+    return true;
+  }
     const secondInput = document.getElementById('pf-secondId');
     if(secondInput && !matchIds(secondInput.value, row.secondId)) return false;
     const agentInput = document.getElementById('pf-agentId');
@@ -1134,7 +1231,7 @@ function renderPicker(){
   </tr>`;
   document.getElementById('pickerBody').innerHTML = pageRows.map(row=>`<tr class="${pickerChecked.has(row.id)?'picked':''}">
     <td><input type="checkbox" ${pickerChecked.has(row.id)?'checked':''} onclick="togglePickerRow('${row.id}', this.checked)"></td>
-    ${cols.map(c=>`<td>${row[c[0]]}</td>`).join('')}
+    ${cols.map(c=>`<td>${pickerCell(row, c[0])}</td>`).join('')}
   </tr>`).join('') || `<tr><td colspan="${cols.length+1}" style="text-align:center;color:#808695">没有匹配的数据</td></tr>`;
   const pages = Math.max(1, Math.ceil(pickerFiltered.length / pickerPageSize));
   document.getElementById('pickerChosen').textContent = '已勾选 ' + pickerChecked.size + ' 条';
@@ -1143,6 +1240,12 @@ function renderPicker(){
 }
 function confirmPicker(){
   const chosen = pickerSource().filter(row => pickerChecked.has(row.id));
+  if(pickerContext === 'recycler'){
+    recyclerState = chosen.map(row => ({id: row.id, name: row.name}));
+    closePicker();
+    renderRecyclers();
+    return;
+  }
   scopeState[pickerType] = chosen.map(row => ({id: row.id, name: row.name}));
   closePicker();
   renderScope();
@@ -1164,9 +1267,6 @@ function setShipMode(mode){
   syncReserveTimesField(mode);
   syncRecyclerField(mode);
 }
-function normalizeRecyclerInput(text){
-  return (text || '').split(',').map(s => s.trim()).filter(Boolean).join(',');
-}
 function recyclerCellText(row){
   if(row.mode !== '过仓') return '-';
   const r = row.recycler;
@@ -1177,7 +1277,10 @@ function syncRecyclerField(mode){
   mode = mode || currentShipMode();
   const item = document.getElementById('recyclerItem');
   item.style.display = mode === '过仓' ? 'flex' : 'none';
-  if(mode !== '过仓') document.getElementById('mRecycler').value = '';
+  if(mode !== '过仓') {
+    recyclerState = [];
+    renderRecyclers();
+  }
 }
 function reserveTimesText(row){
   if(row.mode !== '过仓' || !row.reserveTimes || !row.reserveTimes.length) return '-';
@@ -1301,17 +1404,18 @@ function openModal(mode, id){
     else scopeState[row.effectType] = row.scope;
     setShipMode(row.mode);
     setReserveTimes(row.mode === '过仓' ? (row.reserveTimes || []) : []);
-    const rv = row.recycler;
-    document.getElementById('mRecycler').value = (row.mode === '过仓' && rv && rv !== '全部' && rv !== '/') ? rv : '';
+    loadRecyclersFromString(row.mode === '过仓' ? row.recycler : '');
   } else if(mode === '编辑'){
     scopeState.渠道 = '900030（小当置换-OPPO）';
     document.getElementById('effectType').value = '渠道';
     setShipMode('直发');
-    document.getElementById('mRecycler').value = '';
+    recyclerState = [];
+    renderRecyclers();
   } else {
     setShipMode('直发');
     setReserveTimes([]);
-    document.getElementById('mRecycler').value = '';
+    recyclerState = [];
+    renderRecyclers();
   }
   renderScope();
   const editing = rows.find(r => r.id === editingId);
@@ -1333,7 +1437,7 @@ function saveModal(){
     if(reserveTimes === null) return;
     editing.mode = ship.value;
     editing.reserveTimes = ship.value === '过仓' ? reserveTimes : [];
-    editing.recycler = ship.value === '过仓' ? (normalizeRecyclerInput(document.getElementById('mRecycler').value) || '全部') : '全部';
+    editing.recycler = ship.value === '过仓' ? (recyclerIdsString() || '全部') : '全部';
     editing.name = '演示用户';
     editing.date = fmtNow();
     renderRows(filteredRows());
@@ -1361,7 +1465,7 @@ function saveModal(){
     showToast('请选择生效范围');
     return;
   }
-  const recyclers = mode === '过仓' ? normalizeRecyclerInput(document.getElementById('mRecycler').value) : '';
+  const recyclers = mode === '过仓' ? recyclerIdsString() : '';
   if(editing){
     editing.mode = mode;
     editing.reserveTimes = mode === '过仓' ? reserveTimes : [];
